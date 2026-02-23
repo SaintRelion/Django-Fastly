@@ -82,9 +82,7 @@ class MeView(APIView):
             # fallback to extra_info
             elif hasattr(user, "extra_info") and field in user.extra_info:
                 data[field] = user.extra_info[field]
-
-        # roles is a special case (groups)
-        if fields_to_return.get("roles", False):
-            data["roles"] = list(user.groups.values_list("name", flat=True))
+            elif field == "roles":
+                data["roles"] = list(user.groups.values_list("name", flat=True))
 
         return Response(data)
