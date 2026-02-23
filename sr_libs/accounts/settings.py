@@ -1,7 +1,7 @@
 from django.conf import settings
 from datetime import timedelta
 
-"SIMPLE_JWT"= {
+SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
@@ -9,13 +9,11 @@ from datetime import timedelta
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-"AUTHENTICATION_BACKENDS"= [
-    "sr_libs.accounts.backends.MultiIdentifierBackend"
-]
+AUTHENTICATION_BACKENDS = ["sr_libs.accounts.backends.MultiIdentifierBackend"]
 
-"AUTH_USER_MODEL"= "accounts.User"
+AUTH_USER_MODEL = "accounts.User"
 
-"REST_FRAMEWORK"= {
+REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
