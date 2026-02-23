@@ -1,0 +1,12 @@
+[project]
+name = "django-saintrelion-libs"
+version = "0.0.0"
+description = "Modular Django libraries"
+dependencies = [
+    "django",
+    "djangorestframework"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
