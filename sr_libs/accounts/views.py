@@ -16,6 +16,8 @@ class RegisterView(APIView):
         password = data.get("password")
         extra_info = data.get("extra_info", {})
 
+        print(data)
+
         if User.objects.filter(username=username).exists():
             return Response(
                 {"error": "User already exists"}, status=status.HTTP_406_NOT_ACCEPTABLE
