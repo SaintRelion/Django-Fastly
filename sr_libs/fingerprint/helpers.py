@@ -24,9 +24,11 @@ def base64url_to_bytes(val: str) -> bytes:
     return base64.urlsafe_b64decode(val + padding)
 
 
-RP_ID = os.getenv("RP_ID")
-RP_NAME = os.getenv("RP_NAME")
-ORIGIN = os.getenv("ORIGIN")
+from django.conf import settings
+
+RP_ID = getattr(settings, "RP_ID", "default_rp_id")
+RP_NAME = getattr(settings, "RP_NAME", "default_rp_name")
+ORIGIN = getattr(settings, "ORIGIN", "https://localhost")
 
 
 def create_registration_options(user):
