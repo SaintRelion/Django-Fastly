@@ -30,6 +30,17 @@ def create_resource_viewset(name, config):
             qs = super().get_queryset()
             if operations.get("archive") and hasattr(model, "is_archived"):
                 return qs.filter(is_archived=False)
+
+            # dynamic filtering from query params
+            filter_kwargs = {}
+            for key, value in self.request.query_params.items():
+                filter_kwargs[django_field] = value.strip(
+                    '"'
+                )  # remove quotes if present
+
+            if filter_kwargs:
+                qs = qs.filter(**filter_kwargs)
+
             return qs
 
         def get_serializer_class(self):
