@@ -32,14 +32,28 @@ def create_resource_viewset(name, config):
                 return qs.filter(is_archived=False)
 
             # dynamic filtering from query params
-            filter_kwargs = {}
-            for key, value in self.request.query_params.items():
-                filter_kwargs[django_field] = value.strip(
-                    '"'
-                )  # remove quotes if present
+            if self.action == "list":
+                filter_kwargs = {}
 
-            if filter_kwargs:
-                qs = qs.filter(**filter_kwargs)
+                for key, value in self.request.query_params.items():
+                    value = value.strip('"')  # remove quotes if frontend sent "Active"
+                    try:
+                        field = model._meta.get_field(key)
+                        if isinstance(field, models.ForeignKey):
+                            # convert FK to underlying id field
+                            key = f"{key}_id"
+                    except FieldDoesNotExist:
+                        # skip unknown fields
+                        continue
+
+                    # Optional: handle comma-separated lists for __in filtering
+                    if "," in value:
+                        filter_kwargs[f"{key}__in"] = value.split(",")
+                    else:
+                        filter_kwargs[key] = value
+
+                if filter_kwargs:
+                    qs = qs.filter(**filter_kwargs)
 
             return qs
 
