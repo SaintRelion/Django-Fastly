@@ -5,7 +5,8 @@ description = "Modular Django libraries"
 dependencies = [
     "django",
     "djangorestframework",
-    "webauthn"
+    "djangorestframework-simplejwt",
+    "webauthn",
 ]
 
 [build-system]
