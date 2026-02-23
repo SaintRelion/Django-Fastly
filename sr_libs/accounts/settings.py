@@ -1,11 +1,11 @@
 from datetime import timedelta
 
-ME = {
-    "id": True,
-    "email": True,
-    "roles": True,
-    "isAdmin": True,
-}
+ME = [
+    "id",
+    "email",
+    "roles",
+    "is_staff",
+]
 
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True
