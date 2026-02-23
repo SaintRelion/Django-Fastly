@@ -13,7 +13,6 @@ class RegisterView(APIView):
 
     def post(self, request):
         data = request.data.copy()
-        username = data.get("username")
         password = data.get("password")
         roles = data.pop("roles", [])
         unique_fields = data.pop("uniqueFields", [])
@@ -41,6 +40,9 @@ class RegisterView(APIView):
         print(user_data)
         print("=== Extra Data ===")
         print(extra_info)
+
+        if "password" in user_data:
+            del user_data["password"]
 
         # Create the user
         user = User.objects.create(
