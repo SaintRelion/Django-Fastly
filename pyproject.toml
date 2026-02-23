@@ -4,7 +4,8 @@ version = "1.0.0"
 description = "Modular Django libraries"
 dependencies = [
     "django",
-    "djangorestframework"
+    "djangorestframework",
+    "webauthn"
 ]
 
 [build-system]
