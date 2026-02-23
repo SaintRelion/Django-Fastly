@@ -1,9 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.hashers import make_password
+
+from .settings import ME
 
 User = get_user_model()
 
@@ -59,3 +63,28 @@ class RegisterView(APIView):
         return Response(
             {"success": True, "id": user.id}, status=status.HTTP_201_CREATED
         )
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        fields_to_return = getattr(settings, "ME", ME)
+
+        data = {}
+
+        for field in fields_to_return:
+            # standard attribute
+            if hasattr(user, field):
+                data[field] = getattr(user, field)
+            # fallback to extra_info
+            elif hasattr(user, "extra_info") and field in user.extra_info:
+                data[field] = user.extra_info[field]
+
+        # roles is a special case (groups)
+        if fields_to_return.get("roles", False):
+            data["roles"] = list(user.groups.values_list("name", flat=True))
+
+        return Response(data)
