@@ -3,10 +3,13 @@ from datetime import timedelta
 
 # defaults
 DEFAULTS = {
-    "JWT_ACCESS_LIFETIME": timedelta(minutes=30),
-    "JWT_REFRESH_LIFETIME": timedelta(days=7),
-    "JWT_ROTATE_REFRESH_TOKENS": True,
-    "JWT_BLACKLIST_AFTER_ROTATION": True,
+    "SIMPLE_JWT": {
+        "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+        "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+        "ROTATE_REFRESH_TOKENS": True,
+        "BLACKLIST_AFTER_ROTATION": True,
+        "AUTH_HEADER_TYPES": ("Bearer",),
+    },
     "AUTHENTICATION_BACKENDS": [
         "sr_libs.accounts.backends.MultiIdentifierBackend",
     ],
