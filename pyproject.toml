@@ -8,6 +8,7 @@ dependencies = [
     "djangorestframework-simplejwt",
     "django-cors-headers",
     "webauthn",
+    "django-otp"
 ]
 
 [build-system]

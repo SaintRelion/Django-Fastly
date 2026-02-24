@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 
 from .models import DeviceCredential, WebAuthnChallenge
 
-from .helpers import (
+from .utils import (
     create_registration_options,
     verify_registration,
     create_authentication_options,

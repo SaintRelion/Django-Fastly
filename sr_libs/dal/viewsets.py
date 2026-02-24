@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.exceptions import MethodNotAllowed
 
-from .helpers import apply_dynamic_filters
+from .utils import apply_dynamic_filters
 from .serializers import create_dynamic_serializer
 from .mixins import ArchiveMixin
 
