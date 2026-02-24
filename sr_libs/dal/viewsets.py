@@ -60,6 +60,28 @@ def create_resource_viewset(name, config):
 
             return super().destroy(request, *args, **kwargs)
 
+        def perform_create(self, serializer):
+            instance = serializer.save()
+            data = self.request.data
+
+            # Handle special models on creation
+            if hasattr(instance, "update_with_extra_info"):
+                instance.update_with_extra_info(data)
+
+        def perform_update(self, serializer):
+            instance = serializer.instance
+            data = self.request.data
+
+            # Special-case models can handle extra_info dynamically
+            if hasattr(instance, "update_with_extra_info"):
+                instance.update_with_extra_info(data)
+            else:
+                # default behavior: update only actual fields
+                for key, value in data.items():
+                    if hasattr(instance, key):
+                        setattr(instance, key, value)
+                instance.save()
+
         def perform_destroy(self, instance):
             if operations.get("archive"):
                 if not isinstance(instance, ArchiveMixin):
