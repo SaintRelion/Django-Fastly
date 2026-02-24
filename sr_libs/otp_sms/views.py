@@ -12,6 +12,8 @@ User = get_user_model()
 class SendOTP(APIView):
     """Send OTP to a user via SMS or Email"""
 
+    permission_classes = []
+
     def post(self, request):
         username = request.data.get("username")
         otp_type = request.data.get("type", "sms")
@@ -34,6 +36,8 @@ class SendOTP(APIView):
 
 class VerifyOTP(APIView):
     """Verify a submitted OTP code"""
+
+    permission_classes = []
 
     def post(self, request):
         otp_id = request.data.get("otp_id")
