@@ -15,7 +15,7 @@ ACTION_MAP = {
 }
 
 
-def create_resource_viewset(config):
+def create_resource_viewset(name, config):
     model = config["model"]
     operations = config["operations"]
 
@@ -51,7 +51,7 @@ def create_resource_viewset(config):
             return create_dynamic_serializer(
                 model,
                 fields,
-                f"{model.__name__}{dal_action.capitalize()}Serializer",
+                f"{name.capitalize()}{dal_action.capitalize()}Serializer",
             )
 
         def destroy(self, request, *args, **kwargs):
@@ -64,13 +64,13 @@ def create_resource_viewset(config):
             if operations.get("archive"):
                 if not isinstance(instance, ArchiveMixin):
                     raise ValueError(
-                        f"{model.__name__} must inherit ArchiveMixin for archive support."
+                        f"{name.capitalize()} must inherit ArchiveMixin for archive support."
                     )
                 instance.is_archived = True
                 instance.save()
             else:
                 super().perform_destroy(instance)
 
-    DynamicViewSet.__name__ = f"{model.__name__}ViewSet"
+    DynamicViewSet.__name__ = f"{name.capitalize()}ViewSet"
 
     return DynamicViewSet
