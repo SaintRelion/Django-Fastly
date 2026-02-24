@@ -1,10 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Q
 from django.contrib.auth import get_user_model
+
+from sr_libs.otp_sms.services import send_email_otp
 from .models import OTP
 from .utils import create_otp
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -15,22 +17,37 @@ class SendOTP(APIView):
     permission_classes = []
 
     def post(self, request):
-        username = request.data.get("username")
+        identifier = request.data.get("username") or request.data.get("email")
+
+        if not identifier:
+            return Response({"detail": "Username or email required."}, status=400)
+
         otp_type = request.data.get("type", "sms")
         extra_info = request.data.get("extra_info", {})
 
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(Q(username=identifier) | Q(email=identifier))
         except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "User not found."}, status=404)
 
         otp = create_otp(user, otp_type, extra_info=extra_info)
 
-        # TODO: integrate SMS/email delivery via Twilio/Semafore
+        if otp.type == "email":
+            if not user.email:
+                return Response(
+                    {"detail": "User has no email."},
+                    status=400,
+                )
+
+            send_email_otp(user, otp)
+
         return Response(
-            {"otp_id": otp.id, "expires_at": otp.expires_at, "type": otp.type}
+            {
+                "otp_id": otp.id,
+                "expires_at": otp.expires_at,
+                "type": otp.type,
+                "detail": "OTP sent successfully.",
+            }
         )
 
 
