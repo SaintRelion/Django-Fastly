@@ -1,8 +1,15 @@
 from django.core.mail import send_mail
+from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
 
 
 def send_email_otp(user, otp):
+    # ensure credentials exist
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        raise ImproperlyConfigured(
+            "EMAIL_HOST_USER and EMAIL_HOST_PASSWORD must be set to send emails."
+        )
+
     subject = "Your OTP Code"
     message = f"""
 Hello {user.username},
