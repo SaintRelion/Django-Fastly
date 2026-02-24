@@ -14,7 +14,7 @@ def create_derived_view(name, config):
             if not operations.get("list"):
                 return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-            data = resolver(request)
+            data = resolver(filters=request.query_params)
             return Response(data)
 
     DerivedView.__name__ = f"{name.capitalize()}DerivedView"
