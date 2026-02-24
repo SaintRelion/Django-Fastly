@@ -15,7 +15,7 @@ ACTION_MAP = {
 }
 
 
-def create_resource_viewset(name, config):
+def create_resource_viewset(config):
     model = config["model"]
     operations = config["operations"]
 

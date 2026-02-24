@@ -30,7 +30,7 @@ def _normalize_operations(model, operations: dict):
     return normalized
 
 
-def register_resource(*, name: str, model, endpoint: str, operations: dict):
+def register_resource(*, name: str, model, operations: dict):
     if name in RESOURCE_REGISTRY:
         raise ValueError(f"Resource '{name}' already registered.")
 
@@ -42,6 +42,6 @@ def register_resource(*, name: str, model, endpoint: str, operations: dict):
 
     RESOURCE_REGISTRY[name] = {
         "model": model,
-        "endpoint": endpoint,
+        "endpoint": name,
         "operations": normalized_ops,
     }

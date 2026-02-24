@@ -24,12 +24,11 @@ def create_derived_view(name, config):
 def register_derived_resource(
     *,
     name: str,
-    endpoint: str,
     resolver,
     operations: dict,
 ):
     DERIVED_RESOURCE_REGISTRY[name] = {
-        "endpoint": endpoint,
+        "endpoint": name,
         "resolver": resolver,
         "operations": operations,
     }
