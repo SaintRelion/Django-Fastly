@@ -18,7 +18,11 @@ derived_patterns = []
 
 for name, config in DERIVED_RESOURCE_REGISTRY.items():
     view = create_derived_view(name, config)
-    derived_patterns.append(path(config["endpoint"], view.as_view()))
+    # ensure endpoint has trailing slash just like standard resources
+    endpoint = config["endpoint"]
+    if not endpoint.endswith("/"):
+        endpoint += "/"
+    derived_patterns.append(path(endpoint, view.as_view()))
 
 urlpatterns = [
     path("", include(router.urls)),
