@@ -4,7 +4,7 @@ from rest_framework import status
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 
-from sr_libs.otp_sms.services import send_email_otp
+from .services.email import send_email_otp
 from .models import OTP
 from .utils import create_otp
 
