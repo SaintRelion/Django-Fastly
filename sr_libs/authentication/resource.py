@@ -6,7 +6,13 @@ from .serializers import create_dynamic_serializer
 from .registry import AUTH_REGISTRY
 
 
-def define_register(*, serializer, auto_hash_password=True, password_field="password"):
+def define_register(
+    *,
+    serializer,
+    auto_hash_password=True,
+    password_field="password",
+    allowed_read_only_fields=[]
+):
     User = get_user_model()
 
     # CASE 1 — Custom serializer passed
@@ -23,10 +29,10 @@ def define_register(*, serializer, auto_hash_password=True, password_field="pass
         raise ValueError("serializer must be '__all__', list, or Serializer class")
 
     DynamicSerializer = create_dynamic_serializer(
-        model=User,
-        fields=fields,
+        accounts_model=User,
+        allowed_fields=fields,
         name="DynamicRegisterSerializer",
-        read_only_fields=["id"],
+        read_only_fields=["id"] + allowed_read_only_fields,
     )
 
     # Inject create override dynamically
@@ -58,10 +64,10 @@ def define_me(*, serializer):
         raise ValueError("serializer must be '__all__', list, or Serializer class")
 
     DynamicSerializer = create_dynamic_serializer(
-        model=User,
-        fields=fields,
+        accounts_model=User,
+        allowed_fields=fields,
         name="DynamicMeSerializer",
-        read_only_fields=[],
+        allowed_read_only_fields=[],
     )
 
     AUTH_REGISTRY["me"] = DynamicSerializer
