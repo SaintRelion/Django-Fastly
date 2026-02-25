@@ -21,7 +21,7 @@ for name, config in DERIVED_RESOURCE_REGISTRY.items():
     endpoint = config["endpoint"]
     if not endpoint.endswith("/"):
         endpoint += "/"
-    derived_patterns.append(path(endpoint, viewset.as_view()))
+    derived_patterns.append(path(endpoint, viewset.as_view({"get": "list"})))
 
 urlpatterns = [
     path("", include(router.urls)),
