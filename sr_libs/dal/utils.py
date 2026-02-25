@@ -4,7 +4,7 @@ from django.db import models
 
 def apply_dynamic_filters(qs, model, query_params):
     filter_kwargs = {}
-
+    print(query_params)
     for key, value in query_params.items():
         try:
             field = model._meta.get_field(key)
