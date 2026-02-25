@@ -3,7 +3,7 @@ from django.urls import path, include
 
 
 from .registry import RESOURCE_REGISTRY, DERIVED_RESOURCE_REGISTRY
-from .viewsets import create_resource_viewset, create_derived_viewset
+from .viewset import create_resource_viewset, create_derived_viewset
 
 router = DefaultRouter()
 
@@ -16,12 +16,12 @@ for name, config in RESOURCE_REGISTRY.items():
 derived_patterns = []
 
 for name, config in DERIVED_RESOURCE_REGISTRY.items():
-    view = create_derived_viewset(name, config)
+    viewset = create_derived_viewset(name, config)
     # ensure endpoint has trailing slash just like standard resources
     endpoint = config["endpoint"]
     if not endpoint.endswith("/"):
         endpoint += "/"
-    derived_patterns.append(path(endpoint, view.as_view()))
+    derived_patterns.append(path(endpoint, viewset.as_view()))
 
 urlpatterns = [
     path("", include(router.urls)),
