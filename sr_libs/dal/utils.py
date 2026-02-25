@@ -8,6 +8,11 @@ def apply_dynamic_filters(qs, model, query_params):
     for key, value in query_params.items():
         value = value.strip('"')
 
+        print("==========")
+        print(key)
+        print(value)
+        print("\n")
+
         try:
             field = model._meta.get_field(key)
         except FieldDoesNotExist:
