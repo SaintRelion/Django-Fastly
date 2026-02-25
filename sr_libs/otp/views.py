@@ -4,9 +4,9 @@ from rest_framework import status
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 
-from .services.email import send_email_otp
+from ..delivery_channels.services.email import send_email
 from .models import OTP
-from .utils import create_otp
+from .utils import create_otp, send_otp
 
 User = get_user_model()
 
@@ -31,15 +31,10 @@ class SendOTP(APIView):
             return Response({"detail": "User not found."}, status=404)
 
         otp = create_otp(user, otp_type, extra_info=extra_info)
-
-        if otp.type == "email":
-            if not user.email:
-                return Response(
-                    {"detail": "User has no email."},
-                    status=400,
-                )
-
-            send_email_otp(user, otp)
+        try:
+            send_otp(user, otp)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
 
         return Response(
             {

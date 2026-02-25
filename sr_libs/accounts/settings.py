@@ -1,12 +1,5 @@
 from datetime import timedelta
 
-ME = [
-    "id",
-    "email",
-    "roles",
-    "is_staff",
-]
-
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True
 
@@ -21,8 +14,6 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = ["sr_libs.accounts.backends.MultiIdentifierBackend"]
-
-AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

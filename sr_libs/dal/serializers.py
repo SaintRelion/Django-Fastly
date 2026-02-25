@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
 
-def create_dynamic_serializer(resource_model, operation_fields, name):
+def create_dynamic_serializer(resource_model, allowed_fields, name):
     class Meta:
         model = resource_model
-        fields = operation_fields
+        fields = allowed_fields
+        read_only_fields = ["id", "created_at"]
 
     attrs = {"Meta": Meta}
 
