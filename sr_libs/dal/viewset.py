@@ -45,8 +45,11 @@ def create_resource_viewset(name, config):
                 raise MethodNotAllowed(f"{drf_action} not supported")
 
             op_value = operations.get(dal_action)
-            if not op_value:
+            if op_value is False or op_value is None:
                 raise MethodNotAllowed(f"{dal_action} not allowed")
+
+            if op_value is True:
+                op_value = "__all__"
 
             # CASE 1: Custom serializer class
             if isinstance(op_value, type) and issubclass(
