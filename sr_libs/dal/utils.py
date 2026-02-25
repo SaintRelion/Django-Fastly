@@ -3,13 +3,6 @@ from django.db import models
 
 
 def apply_dynamic_filters(qs, model, query_params):
-    """
-    Applies dynamic filtering based on query_params.
-    - Skips unknown fields
-    - Converts FK fields to _id
-    - Supports comma-separated values (__in)
-    """
-
     filter_kwargs = {}
 
     for key, value in query_params.items():

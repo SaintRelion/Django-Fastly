@@ -1,4 +1,5 @@
-from rest_framework import viewsets
+from requests import Response
+from rest_framework import serializers, viewsets
 from rest_framework.exceptions import MethodNotAllowed
 
 from .utils import apply_dynamic_filters
@@ -21,7 +22,7 @@ def create_resource_viewset(name, config):
 
     base_queryset = model.objects.all()
 
-    class DynamicViewSet(viewsets.ModelViewSet):
+    class ResourceViewSet(viewsets.ModelViewSet):
         queryset = base_queryset
         serializer_class = None  # dynamic
 
@@ -43,15 +44,20 @@ def create_resource_viewset(name, config):
             if not dal_action:
                 raise MethodNotAllowed(f"{drf_action} not supported")
 
-            if not operations.get(dal_action):
+            op_value = operations.get(dal_action)
+            if not op_value:
                 raise MethodNotAllowed(f"{dal_action} not allowed")
 
-            fields = operations[dal_action]
+            # CASE 1: Custom serializer class
+            if isinstance(op_value, type) and issubclass(
+                op_value, serializers.BaseSerializer
+            ):
+                return op_value
 
+            # CASE 2 & 3: list of fields or "__all__"
             return create_dynamic_serializer(
-                model,
-                fields,
-                f"{name.capitalize()}{dal_action.capitalize()}Serializer",
+                resource_model=model,
+                allowed_fields=op_value,
             )
 
         def destroy(self, request, *args, **kwargs):
@@ -59,20 +65,6 @@ def create_resource_viewset(name, config):
                 raise MethodNotAllowed("Delete not allowed")
 
             return super().destroy(request, *args, **kwargs)
-
-        def perform_create(self, serializer):
-            instance = serializer.save()
-            data = self.request.data
-
-            # Handle special models on creation
-            if hasattr(instance, "update_with_extra_info"):
-                instance.update_with_extra_info(data)
-
-        def perform_update(self, serializer):
-            instance = serializer.instance
-
-            if hasattr(instance, "update_with_extra_info"):
-                instance.update_with_extra_info(self.request.data)
 
         def perform_destroy(self, instance):
             if operations.get("archive"):
@@ -85,6 +77,26 @@ def create_resource_viewset(name, config):
             else:
                 super().perform_destroy(instance)
 
-    DynamicViewSet.__name__ = f"{name.capitalize()}ViewSet"
+    ResourceViewSet.__name__ = f"{name.capitalize()}ViewSet"
 
-    return DynamicViewSet
+    return ResourceViewSet
+
+
+def create_derived_viewset(name, config):
+    serializer_class = config["serializer"]
+    operations = config["operations"]
+
+    class DerivedViewSet(viewsets.ViewSet):
+        def list(self, request, *args, **kwargs):
+            if not operations.get("list"):
+                raise MethodNotAllowed("list not allowed")
+
+            serializer = serializer_class(data=request.query_params)
+            serializer.is_valid(raise_exception=True)
+            filters = serializer.validated_data
+
+            data = serializer_class.list_data(filters)
+            return Response(data)
+
+    DerivedViewSet.__name__ = f"{name.capitalize()}DerivedViewSet"
+    return DerivedViewSet

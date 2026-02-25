@@ -1,33 +1,6 @@
 from django.db import models
-from .registry import RESOURCE_REGISTRY, ALLOWED_OPERATIONS
-
-
-def _normalize_operations(model, operations: dict):
-    normalized = {}
-
-    model_fields = [f.name for f in model._meta.fields]
-
-    for op in ALLOWED_OPERATIONS:
-        value = operations.get(op, False)
-
-        if value in (False, None):
-            normalized[op] = False
-            continue
-
-        if value is True or value == "__all__":
-            normalized[op] = model_fields
-            continue
-
-        if isinstance(value, list):
-            invalid = set(value) - set(model_fields)
-            if invalid:
-                raise ValueError(f"Invalid fields {invalid} for {model.__name__}")
-            normalized[op] = value
-            continue
-
-        raise ValueError(f"Invalid operation config for '{op}'")
-
-    return normalized
+from rest_framework import serializers
+from .registry import RESOURCE_REGISTRY, DERIVED_RESOURCE_REGISTRY
 
 
 def register_resource(*, name: str, model, operations: dict):
@@ -37,11 +10,29 @@ def register_resource(*, name: str, model, operations: dict):
     if not issubclass(model, models.Model):
         raise ValueError("model must be a Django model.")
 
-    # Validate fields and operation booleans
-    normalized_ops = _normalize_operations(model, operations)
-
     RESOURCE_REGISTRY[name] = {
         "model": model,
         "endpoint": name,
-        "operations": normalized_ops,
+        "operations": operations,
+    }
+
+
+def register_derived_resource(*, name: str, serializer, operations: dict = None):
+    operations = operations or {"list": True}
+
+    # Validate operations
+    for op in operations.keys():
+        if op not in {"list"}:
+            raise ValueError(f"Derived resources only support 'list', not '{op}'")
+
+    if not (
+        isinstance(serializer, type)
+        and issubclass(serializer, serializers.BaseSerializer)
+    ):
+        raise ValueError("Derived resource requires a DRF Serializer class")
+
+    DERIVED_RESOURCE_REGISTRY[name] = {
+        "endpoint": name,
+        "serializer": serializer,
+        "operations": operations,
     }
