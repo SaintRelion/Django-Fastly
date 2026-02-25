@@ -11,7 +11,7 @@ def apply_dynamic_filters(qs, model, query_params):
         try:
             field = model._meta.get_field(key)
         except FieldDoesNotExist:
-            # Allow lookup expressions like due_date__gte
+            # allow lookup expressions like due_date__gte
             base_field = key.split("__")[0]
             try:
                 model._meta.get_field(base_field)
@@ -21,9 +21,17 @@ def apply_dynamic_filters(qs, model, query_params):
         # Handle ForeignKey fields
         if isinstance(field, models.ForeignKey):
             key = f"{key}_id"
-            value = int(value)  # ensure integer
+            # handle comma-separated FKs
+            if "," in value:
+                value = [int(v) for v in value.split(",")]
+                filter_kwargs[f"{key}__in"] = value
+                continue
+            else:
+                value = int(value)  # single FK
+                filter_kwargs[key] = value
+                continue
 
-        # Handle comma-separated values for __in lookups
+        # Handle comma-separated values for non-FK fields
         if "," in value:
             filter_kwargs[f"{key}__in"] = value.split(",")
         else:
