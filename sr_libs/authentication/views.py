@@ -5,7 +5,7 @@ from rest_framework import status
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from sr_libs.accounts.registry import AUTH_REGISTRY
+from .registry import AUTH_REGISTRY
 
 User = get_user_model()
 
