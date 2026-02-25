@@ -29,7 +29,7 @@ def create_resource_viewset(name, config):
         def get_queryset(self):
             qs = super().get_queryset()
             if operations.get("archive") and hasattr(model, "is_archived"):
-                return qs.filter(is_archived=False)
+                qs = qs.filter(is_archived=False)
 
             # dynamic filtering from query params
             if self.action == "list":
