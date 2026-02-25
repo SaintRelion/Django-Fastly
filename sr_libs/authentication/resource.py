@@ -11,7 +11,7 @@ def define_register(
     serializer,
     auto_hash_password=True,
     password_field="password",
-    allowed_read_only_fields=[]
+    read_only_fields=[]
 ):
     User = get_user_model()
 
@@ -32,7 +32,7 @@ def define_register(
         accounts_model=User,
         allowed_fields=fields,
         name="DynamicRegisterSerializer",
-        read_only_fields=["id"] + allowed_read_only_fields,
+        allowed_read_only_fields=["id"] + read_only_fields,
     )
 
     # Inject create override dynamically
