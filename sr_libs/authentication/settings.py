@@ -13,7 +13,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-AUTHENTICATION_BACKENDS = ["sr_libs.accounts.backends.MultiIdentifierBackend"]
+AUTHENTICATION_BACKENDS = ["sr_libs.authentication.backends.MultiIdentifierBackend"]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
