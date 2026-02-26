@@ -10,7 +10,7 @@ dependencies = [
     "webauthn",
     "django-otp",
     "celery",
-    "redis
+    "redis"
 ]
 
 [build-system]
