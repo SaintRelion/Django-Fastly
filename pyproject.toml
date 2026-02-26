@@ -9,7 +9,8 @@ dependencies = [
     "django-cors-headers",
     "webauthn",
     "django-otp",
-    "celery"
+    "celery",
+    "redis
 ]
 
 [build-system]
