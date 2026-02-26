@@ -19,7 +19,6 @@ def process_model_task(
     model_label,
     instance_id,
     rule_name,
-    action_path,
     kwargs=None,
 ):
     try:
@@ -38,7 +37,7 @@ def process_model_task(
             return
 
         # 1️⃣ Execute action
-        action = import_module(action_path)
+        action = import_module(rule.action_path)
         action(instance, **kwargs)
 
         # 2️⃣ Re-fetch instance (important if action changed state)
@@ -99,6 +98,6 @@ def scan_scheduled_tasks():
             process_model_task.delay(
                 model_label=task.model,
                 instance_id=task.instance_id,
-                action_path=rule.action_path,
+                rule_name=task.rule_name,
                 kwargs=task.kwargs,
             )

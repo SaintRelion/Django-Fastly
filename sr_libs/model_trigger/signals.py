@@ -25,7 +25,7 @@ def setup_model_signals():
                     process_model_task.delay(
                         model_label=model_label,
                         instance_id=instance.id,
-                        action_path=rule.action_path,
+                        rule_name=rule.name,
                         kwargs=rule.kwargs,
                     )
 
