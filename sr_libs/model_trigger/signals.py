@@ -21,6 +21,7 @@ def setup_model_signals():
 
             # --- 1️⃣ Reactive rules ---
             for rule in config["reactive_rules"]:
+                print("==========================Reacting")
                 if rule.condition(instance, created):
                     process_model_task.delay(
                         model_label=model_label,
@@ -32,6 +33,7 @@ def setup_model_signals():
             # --- 2️⃣ Scheduled rules ---
             for rule in config["scheduled_rules"]:
                 # Check if we should monitor this instance
+                print("==========================Scheduling")
                 should_monitor = rule.monitor_condition(instance)
                 existing_task = ScheduledTask.objects.filter(
                     model=model_label,
