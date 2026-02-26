@@ -54,7 +54,7 @@ def process_model_task(
             return
 
         try:
-            module_path, func_name = rule.action_path.rsplit(".", 1)
+            module_path, func_name = action_path.rsplit(".", 1)
             module = import_module(module_path)
             action = getattr(module, func_name)
             action(instance, **kwargs)
