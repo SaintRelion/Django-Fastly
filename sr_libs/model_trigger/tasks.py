@@ -15,26 +15,57 @@ def resolve_action(action_path: str):
 
 @shared_task(bind=True, max_retries=5, default_retry_delay=30)
 def process_model_task(
-    self, model_label: str, instance_id: int, action_path: str, kwargs=None
+    self,
+    model_label,
+    instance_id,
+    rule_name,
+    action_path,
+    kwargs=None,
 ):
     try:
-        model = apps.get_model(model_label)
-        instance = model.objects.get(id=instance_id)
+        Model = apps.get_model(model_label)
+        instance = Model.objects.filter(pk=instance_id).first()
+        if not instance:
+            return
 
-        action = resolve_action(action_path)
-        kwargs = kwargs or {}
+        config = registry.get(model_label)
+        if not config:
+            return
+
+        rule_map = {r.name: r for r in config["scheduled_rules"]}
+        rule = rule_map.get(rule_name)
+        if not rule:
+            return
+
+        # 1️⃣ Execute action
+        action = import_module(action_path)
         action(instance, **kwargs)
 
-        # Only reschedule AFTER success
-        task = ScheduledTask.objects.select_for_update().get(
-            model=model_label,
-            instance_id=instance_id,
-            action_path=action_path,
-        )
+        # 2️⃣ Re-fetch instance (important if action changed state)
+        instance.refresh_from_db()
 
-        if task.repeat_every:
-            task.scheduled_at = timezone.now() + task.repeat_every
-            task.save(update_fields=["scheduled_at"])
+        # 3️⃣ Evaluate stop condition
+        should_stop = False
+        if rule.stop_condition:
+            should_stop = rule.stop_condition(instance)
+
+        # 4️⃣ Get ScheduledTask row
+        task = ScheduledTask.objects.filter(
+            model=model_label, instance_id=instance_id, rule_name=rule.name
+        ).first()
+
+        if not task:
+            return
+
+        # 5️⃣ If stop condition met → delete task
+        if should_stop:
+            task.delete()
+            return
+
+        # 6️⃣ Otherwise reschedule if repeat_every exists
+        if rule.repeat_every:
+            task.scheduled_for = timezone.now() + rule.repeat_every
+            task.save()
         else:
             task.delete()
     except Exception as exc:
