@@ -1,104 +1,68 @@
 from celery import shared_task
 from django.apps import apps
-from .models import Notification, ScheduledTask
-from .registry import registry
+from importlib import import_module
 from django.utils import timezone
-from sr_libs.delivery_channels.services.email import send_email
-from sr_libs.delivery_channels.services.sms import send_sms
-
-SERVICE_MAP = {
-    "in_app": None,
-    "email": send_email,
-    "sms": send_sms,
-}
+from .models import ScheduledTask
+from .registry import registry
 
 
-@shared_task(bind=True, max_retries=3)
-def process_model_task(self, model_label, instance_id):
-    """Process a single reactive or scheduled task."""
-    reg_entry = registry.get(model_label)
-    if not reg_entry:
-        return
+def resolve_action(action_path: str):
+    """
+    Import and return callable from string path, e.g. "billing.actions.send_sms"
+    """
+    module_path, func_name = action_path.rsplit(".", 1)
+    module = import_module(module_path)
+    return getattr(module, func_name)
 
+
+@shared_task(bind=True)
+def process_model_task(
+    self, model_label: str, instance_id: int, action_path: str, kwargs=None
+):
+    """
+    Execute the action associated with a reactive or scheduled rule.
+    """
     model = apps.get_model(model_label)
-    try:
-        instance = model.objects.get(id=instance_id)
-    except model.DoesNotExist:
-        return
+    instance = model.objects.get(id=instance_id)
 
-    # Resolve data for notification
-    resolver = reg_entry.get("resolver")
-    data = resolver(instance) if resolver else {}
-
-    # Create notification if needed
-    notification_type = reg_entry.get("notification_type", "in_app")
-    Notification.objects.create(
-        model=model_label, instance_id=instance_id, data=data, type=notification_type
-    )
-
-    # Send via delivery channel
-    service = SERVICE_MAP.get(notification_type)
-    if service:
-        if notification_type == "email":
-            recipient = data.get("user_email")
-            if recipient:
-                service(
-                    subject=data.get("subject", "Notification"),
-                    message=data.get("message", ""),
-                    recipient_list=[recipient],
-                )
-        elif notification_type == "sms":
-            recipient = data.get("user_phone")
-            if recipient:
-                service(recipient, data.get("message", ""))
+    action = resolve_action(action_path)
+    kwargs = kwargs or {}
+    action(instance, **kwargs)
 
 
 @shared_task
 def scan_scheduled_tasks():
-    """Scan all scheduled tasks and enqueue those ready to run."""
+    """
+    Celery Beat task: scan ScheduledTask table and execute due tasks
+    """
     now = timezone.now()
-    for entry in registry.all():
-        scheduled = entry.get("scheduled")
-        if not scheduled:
+    due_tasks = ScheduledTask.objects.filter(scheduled_at__lte=now)
+
+    for task in due_tasks:
+        # Resolve rule to get action_path
+        config = registry.get(task.model)
+        if not config:
+            # skip if model no longer registered
             continue
 
-        model_label = f"{entry['model']._meta.app_label}.{entry['model'].__name__}"
-        # iterate instances
-        model = entry["model"]
-        qs = model.objects.all()
-        for instance in qs:
-            # compute scheduled_at from callable or fixed datetime
-            sched_time = scheduled.get("scheduled_at")
-            if callable(sched_time):
-                scheduled_at = sched_time(instance)
-            else:
-                scheduled_at = sched_time
+        rule_map = {r.name: r for r in config["scheduled_rules"]}
+        rule = rule_map.get(task.rule_name)
+        if not rule:
+            # rule removed from code, delete scheduled task
+            task.delete()
+            continue
 
-            if scheduled_at <= now:
-                stop_condition = scheduled.get("stop_condition")
-                if stop_condition:
-                    # skip if stop_condition met
-                    if all(
-                        getattr(instance, k) == v for k, v in stop_condition.items()
-                    ):
-                        continue
+        # Execute the action
+        process_model_task.delay(
+            model_label=task.model,
+            instance_id=task.instance_id,
+            action_path=rule.action_path,
+            kwargs=task.kwargs,
+        )
 
-                # create ScheduledTask record
-                st, created = ScheduledTask.objects.get_or_create(
-                    model=model_label,
-                    instance_id=instance.id,
-                    scheduled_at=scheduled_at,
-                    defaults={
-                        "notification": scheduled.get("notification"),
-                        "action": scheduled.get("action"),
-                        "status": "pending",
-                    },
-                )
-                # enqueue for execution
-                process_model_task.delay(model_label, instance.id)
-
-                # update for repeat
-                repeat = scheduled.get("repeat_every")
-                if repeat:
-                    st.scheduled_at = scheduled_at + repeat
-                    st.save()
+        # Update or remove ScheduledTask
+        if task.repeat_every:
+            task.scheduled_at += task.repeat_every
+            task.save()
+        else:
+            task.delete()

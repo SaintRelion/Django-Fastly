@@ -1,8 +1,8 @@
 from django.apps import AppConfig
 
 
-class NotificationConfig(AppConfig):
-    name = "sr_libs.notifications"
+class ModelTriggerConfig(AppConfig):
+    name = "sr_libs.model_trigger"
 
     def ready(self):
         from .signals import setup_model_signals

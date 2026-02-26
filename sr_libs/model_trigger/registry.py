@@ -1,14 +1,10 @@
 import threading
+from typing import List, Optional
+
+from sr_libs.model_trigger.models import ReactiveRule, ScheduledRule
 
 
-class ModelSchedulerRegistry:
-    """
-    Holds declarative registration of models + triggers/resolvers.
-    Supports:
-    - reactive triggers (post_save)
-    - scheduled/timestamp triggers
-    """
-
+class ModelTriggerRegistry:
     def __init__(self):
         self._registry = {}
         self._lock = threading.Lock()
@@ -16,29 +12,15 @@ class ModelSchedulerRegistry:
     def register(
         self,
         model,
-        triggers=None,
-        resolver=None,
-        query_filter=None,
-        notification_type="in_app",
-        scheduled=None,
+        reactive_rules: Optional[List[ReactiveRule]] = None,
+        scheduled_rules: Optional[List[ScheduledRule]] = None,
     ):
-        """
-        scheduled: dict with keys:
-            - scheduled_at (datetime or callable)
-            - repeat_every (timedelta, optional)
-            - stop_condition (dict, optional)
-            - action (dict, optional)
-            - notification_type (optional)
-        """
         model_label = f"{model._meta.app_label}.{model.__name__}"
         with self._lock:
             self._registry[model_label] = {
                 "model": model,
-                "triggers": triggers or {},
-                "resolver": resolver,
-                "query_filter": query_filter,
-                "notification_type": notification_type,
-                "scheduled": scheduled,
+                "reactive_rules": reactive_rules or [],
+                "scheduled_rules": scheduled_rules or [],
             }
 
     def get(self, model_label):
@@ -49,23 +31,4 @@ class ModelSchedulerRegistry:
 
 
 # global singleton
-registry = ModelSchedulerRegistry()
-
-
-def register_model(
-    model,
-    triggers=None,
-    resolver=None,
-    query_filter=None,
-    notification_type="in_app",
-    scheduled=None,
-):
-    """Client-facing API for declarative registration."""
-    registry.register(
-        model=model,
-        triggers=triggers,
-        resolver=resolver,
-        query_filter=query_filter,
-        notification_type=notification_type,
-        scheduled=scheduled,
-    )
+registry = ModelTriggerRegistry()

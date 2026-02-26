@@ -1,52 +1,62 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
+
+from .models import ScheduledTask
 from .registry import registry
 from .tasks import process_model_task
 
 
 def setup_model_signals():
-    """Attach pre_save/post_save signals to all registered models."""
     for entry in registry.all():
         model = entry["model"]
+        model_label = f"{model._meta.app_label}.{model.__name__}"
 
-        # store old values
-        @receiver(pre_save, sender=model)
-        def cache_old(sender, instance, **kwargs):
-            if instance.pk:
-                try:
-                    old_instance = sender.objects.get(pk=instance.pk)
-                    instance._old_instance = old_instance
-                except sender.DoesNotExist:
-                    instance._old_instance = None
-            else:
-                instance._old_instance = None
-
-        # handle reactive triggers
         @receiver(post_save, sender=model)
-        def handle_triggers(sender, instance, **kwargs):
-            triggers = entry.get("triggers", {})
-            query_filter = entry.get("query_filter")
-            model_label = f"{sender._meta.app_label}.{sender.__name__}"
-
-            # Skip if query filter exists and instance doesn't match
-            if (
-                query_filter
-                and not query_filter(sender.objects.filter(id=instance.id)).exists()
-            ):
+        def handle_post_save(sender, instance, created, **kwargs):
+            config = registry.get(model_label)
+            if not config:
                 return
 
-            # Check triggers
-            for field, condition in triggers.items():
-                value = getattr(instance, field, None)
-                old_value = (
-                    getattr(instance._old_instance, field, None)
-                    if instance._old_instance
-                    else None
-                )
+            # --- 1️⃣ Reactive rules ---
+            for rule in config["reactive_rules"]:
+                if rule.condition(instance, created):
+                    process_model_task.delay(
+                        model_label=model_label,
+                        instance_id=instance.id,
+                        action_path=rule.action_path,
+                        kwargs=rule.kwargs,
+                    )
 
-                if condition == "boolean":
-                    # only fire if changed from False -> True
-                    if old_value is not True and value is True:
-                        process_model_task.delay(model_label, instance.id)
-                elif callable(condition) and condition(value):
-                    process_model_task.delay(model_label, instance.id)
+            # --- 2️⃣ Scheduled rules ---
+            for rule in config["scheduled_rules"]:
+                # Check if we should monitor this instance
+                should_monitor = rule.monitor_condition(instance)
+                existing_task = ScheduledTask.objects.filter(
+                    model=model_label,
+                    instance_id=instance.id,
+                    rule_name=rule.name,
+                ).first()
+
+                if should_monitor:
+                    # Create ScheduledTask if it doesn't exist
+                    scheduled_at = rule.scheduled_at(instance)
+                    if not existing_task:
+                        ScheduledTask.objects.create(
+                            model=model_label,
+                            instance_id=instance.id,
+                            rule_name=rule.name,
+                            scheduled_at=scheduled_at,
+                            repeat_every=rule.repeat_every,
+                            kwargs=rule.kwargs,
+                        )
+                else:
+                    # Stop condition met → delete scheduled task
+                    if (
+                        existing_task
+                        and rule.stop_condition
+                        and rule.stop_condition(instance)
+                    ):
+                        existing_task.delete()
+                    elif existing_task and not rule.stop_condition:
+                        # optional: delete if monitor_condition False and no stop_condition
+                        existing_task.delete()
