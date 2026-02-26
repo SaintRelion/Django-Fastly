@@ -91,6 +91,7 @@ def process_model_task(
                 logger.info(f"[Task] '{rule_name}' stopped and deleted")
             elif rule.repeat_every:
                 task.scheduled_at = timezone.now() + rule.repeat_every
+                task.status = "pending"
                 task.save()
                 logger.info(f"[Task] '{rule_name}' rescheduled to {task.scheduled_at}")
             else:

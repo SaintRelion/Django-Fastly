@@ -51,7 +51,7 @@ def setup_model_signals():
                             rule_name=rule.name,
                             scheduled_at=scheduled_at,
                             repeat_every=rule.repeat_every,
-                            kwargs=rule.kwargs,
+                            status="pending",
                         )
                 else:
                     # Stop condition met → delete scheduled task
