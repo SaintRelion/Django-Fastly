@@ -12,7 +12,9 @@ def setup_model_signals():
         model_label = f"{model._meta.app_label}.{model.__name__}"
 
         @receiver(post_save, sender=model)
-        def handle_post_save(sender, instance, created, **kwargs):
+        def handle_post_save(
+            sender, instance, created, model_label=model_label, **kwargs
+        ):
             config = registry.get(model_label)
             if not config:
                 return

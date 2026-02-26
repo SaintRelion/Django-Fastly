@@ -49,3 +49,9 @@ class ScheduledTask(models.Model):
         indexes = [
             models.Index(fields=["status", "scheduled_at"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["model", "instance_id", "rule_name"],
+                name="unique_scheduled_rule_per_instance",
+            )
+        ]
