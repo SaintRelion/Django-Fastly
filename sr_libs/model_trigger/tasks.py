@@ -54,8 +54,10 @@ def process_model_task(
             return
 
         try:
-            action_module = import_module(action_path)
-            action_module(instance, **kwargs)
+            module_path, func_name = rule.action_path.rsplit(".", 1)
+            module = import_module(module_path)
+            action = getattr(module, func_name)
+            action(instance, **kwargs)
             logger.info(
                 f"[Task] Executed action {action_path} for {model_label}#{instance_id}"
             )
