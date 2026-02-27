@@ -1,6 +1,6 @@
 [project]
 name = "django-saintrelion-libs"
-version = "4.0.17"
+version = "4.0.16"
 description = "Modular Django libraries"
 dependencies = [
     "django",
@@ -9,7 +9,6 @@ dependencies = [
     "django-cors-headers",
     "webauthn",
     "django-otp",
-    "twilio,
     "celery",
     "redis",
     "gevent"
