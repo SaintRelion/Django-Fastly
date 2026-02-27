@@ -9,6 +9,7 @@ dependencies = [
     "django-cors-headers",
     "webauthn",
     "django-otp",
+    "twilio,
     "celery",
     "redis",
     "gevent"

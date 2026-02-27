@@ -33,8 +33,10 @@ def setup_model_signals():
             # --- 2️⃣ Scheduled rules ---
             for rule in config["scheduled_rules"]:
                 # Check if we should monitor this instance
+                # TODO: WTF HAHAHAH FIX THIS SHIT
                 print("==========================Scheduling")
                 should_monitor = rule.monitor_condition(instance)
+                print(should_monitor)
                 existing_task = ScheduledTask.objects.filter(
                     model=model_label,
                     instance_id=instance.id,

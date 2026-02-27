@@ -22,7 +22,7 @@ class SendOTP(APIView):
         if not identifier:
             return Response({"detail": "Username or email required."}, status=400)
 
-        otp_type = request.data.get("type", "sms")
+        otp_type = request.data.get("otp_type", "sms")
         extra_info = request.data.get("extra_info", {})
 
         try:
