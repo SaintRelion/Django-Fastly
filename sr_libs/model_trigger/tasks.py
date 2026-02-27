@@ -23,10 +23,7 @@ def process_model_task(
     instance_id: int,
     rule_name: str = None,  # Only for scheduled rules
     action_path: str = None,  # Only for reactive rules
-    kwargs: dict = None,
 ):
-    kwargs = kwargs or {}
-
     try:
         Model = apps.get_model(model_label)
         instance = Model.objects.filter(pk=instance_id).first()
@@ -57,7 +54,7 @@ def process_model_task(
             module_path, func_name = action_path.rsplit(".", 1)
             module = import_module(module_path)
             action = getattr(module, func_name)
-            action(instance, **kwargs)
+            action(instance)
             logger.info(
                 f"[Task] Executed action {action_path} for {model_label}#{instance_id}"
             )
@@ -132,5 +129,4 @@ def scan_scheduled_tasks():
                 model_label=task.model,
                 instance_id=task.instance_id,
                 rule_name=task.rule_name,
-                kwargs=task.kwargs,
             )

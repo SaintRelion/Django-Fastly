@@ -10,7 +10,6 @@ class ReactiveRule:
     name: str  # optional, for clarity
     condition: Callable[[Any, bool], bool]  # (instance, created) -> bool
     action_path: str  # e.g., "billing.actions.send_sms"
-    kwargs: Optional[Dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -21,7 +20,6 @@ class ScheduledRule:
     action_path: str
     repeat_every: Optional[timedelta] = None
     stop_condition: Optional[Callable[[Any], bool]] = None
-    kwargs: Optional[Dict[str, Any]] = field(default_factory=dict)
 
 
 class ScheduledTask(models.Model):

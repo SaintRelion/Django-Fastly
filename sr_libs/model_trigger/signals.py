@@ -27,7 +27,6 @@ def setup_model_signals():
                         model_label=model_label,
                         instance_id=instance.id,
                         action_path=rule.action_path,
-                        kwargs=rule.kwargs,
                     )
 
             # --- 2️⃣ Scheduled rules ---
