@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .registry import RESOURCE_REGISTRY, DERIVED_RESOURCE_REGISTRY
 
 
-def register_resource(*, name: str, model, operations: dict):
+def register_resource(*, name: str, model, operations: dict, public: dict = None):
     if name in RESOURCE_REGISTRY:
         raise ValueError(f"Resource '{name}' already registered.")
 
@@ -14,6 +14,7 @@ def register_resource(*, name: str, model, operations: dict):
         "model": model,
         "endpoint": name,
         "operations": operations,
+        "public": public or {},
     }
 
 
