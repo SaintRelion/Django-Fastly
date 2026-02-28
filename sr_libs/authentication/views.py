@@ -5,9 +5,16 @@ from rest_framework import status
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from sr_libs.authentication.serializers import CustomTokenObtainPairSerializer
+
 from .registry import AUTH_REGISTRY
 
 User = get_user_model()
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class RegisterView(APIView):

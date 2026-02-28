@@ -1,4 +1,8 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils import timezone
+
+from sr_libs.authentication.models import UserDevice
 
 
 def create_dynamic_serializer(
@@ -31,3 +35,29 @@ def create_dynamic_serializer(
         (serializers.ModelSerializer,),
         attrs,
     )
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        request = self.context.get("request")
+        user = self.user
+
+        if request and user:
+            device_id = request.headers.get("X-Device-ID")
+            user_agent = request.META.get("HTTP_USER_AGENT")
+            ip_address = request.META.get("REMOTE_ADDR")
+
+            if device_id:
+                UserDevice.objects.update_or_create(
+                    user=user,
+                    device_id=device_id,
+                    defaults={
+                        "user_agent": user_agent,
+                        "ip_address": ip_address,
+                        "is_trusted": True,
+                    },
+                )
+
+        return data
