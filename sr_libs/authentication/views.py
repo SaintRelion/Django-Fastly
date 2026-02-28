@@ -19,18 +19,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class CheckDeviceView(APIView):
-    permission_classes = [AllowAny]  # only logged-in users
+    permission_classes = [AllowAny]
 
     def get(self, request):
         device_id = request.headers.get("X-Device-ID")
-        user = request.user
 
         if not device_id:
             return Response({"error": "No device ID provided"}, status=400)
 
-        exists = UserDevice.objects.filter(user=user, device_id=device_id).exists()
-
-        return Response({"exists": exists})
+        try:
+            device = UserDevice.objects.get(device_id=device_id)
+            return Response({"exists": True, "is_trusted": device.is_trusted})
+        except UserDevice.DoesNotExist:
+            return Response({"exists": False, "is_trusted": False})
 
 
 class RegisterView(APIView):
