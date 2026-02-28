@@ -37,11 +37,9 @@ class CheckDeviceView(APIView):
         if user is None:
             return Response({"exists": False, "is_trusted": False, "valid_user": False})
 
-        # Check if device exists for this user, or create it if not
-        device = UserDevice.objects.get(user=user, device_id=device_id)
+        device = UserDevice.objects.filter(user=user, device_id=device_id).first()
 
-        try:
-            device = UserDevice.objects.get(user=user, device_id=device_id)
+        if device is not None:
             return Response(
                 {
                     "is_trusted": device.is_trusted,
@@ -49,14 +47,15 @@ class CheckDeviceView(APIView):
                     "device_id": device.device_id,
                 }
             )
-        except UserDevice.DoesNotExist:
-            return Response(
-                {
-                    "is_trusted": False,
-                    "valid_user": True,  # user credentials were valid
-                    "device_id": device_id,
-                }
-            )
+
+        # device not found
+        return Response(
+            {
+                "is_trusted": False,
+                "valid_user": True,  # user credentials were valid
+                "device_id": device_id,
+            }
+        )
 
 
 class RegisterView(APIView):
