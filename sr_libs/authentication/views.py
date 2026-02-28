@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import UserDevice
@@ -21,17 +21,42 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class CheckDeviceView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        device_id = request.headers.get("X-Device-ID")
+    def post(self, request):
+        data = request.data
+        device_id = (data.get("identifier") or "").strip()
+        username = (data.get("username") or "").strip()
+        password = data.get("password") or ""
 
-        if not device_id:
-            return Response({"error": "No device ID provided"}, status=400)
+        if not device_id or not username or not password:
+            return Response(
+                {"error": "identifier, username, and password required"}, status=400
+            )
+
+        # Validate user credentials
+        user = authenticate(username=username, password=password)
+        if user is None:
+            return Response({"exists": False, "is_trusted": False, "valid_user": False})
+
+        # Check if device exists for this user, or create it if not
+        device = UserDevice.objects.get(user=user, device_id=device_id)
 
         try:
-            device = UserDevice.objects.get(device_id=device_id)
-            return Response({"exists": True, "is_trusted": device.is_trusted})
+            device = UserDevice.objects.get(user=user, device_id=device_id)
+            return Response(
+                {
+                    "is_trusted": device.is_trusted,
+                    "valid_user": True,
+                    "device_id": device.device_id,
+                }
+            )
         except UserDevice.DoesNotExist:
-            return Response({"exists": False, "is_trusted": False})
+            return Response(
+                {
+                    "is_trusted": False,
+                    "valid_user": True,  # user credentials were valid
+                    "device_id": device_id,
+                }
+            )
 
 
 class RegisterView(APIView):
