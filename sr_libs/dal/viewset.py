@@ -20,7 +20,7 @@ ACTION_MAP = {
 def create_resource_viewset(name, config):
     model = config["model"]
     operations = config["operations"]
-    public_actions = config.get("public", {})
+    permissions = config.get("permissions", {})
 
     base_queryset = model.objects.all()
 
@@ -32,8 +32,8 @@ def create_resource_viewset(name, config):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
 
-            if dal_action in public_actions:
-                permission_classes = public_actions[dal_action]
+            if dal_action in permissions:
+                permission_classes = permissions[dal_action]
                 return [permission() for permission in permission_classes]
 
             return [IsAuthenticated()]
@@ -100,8 +100,19 @@ def create_resource_viewset(name, config):
 def create_derived_viewset(name, config):
     serializer_class = config["serializer"]
     operations = config["operations"]
+    permissions = config.get("permissions", {})
 
     class DerivedViewSet(viewsets.ViewSet):
+        def get_permissions(self):
+            drf_action = self.action
+            dal_action = ACTION_MAP.get(drf_action)
+
+            if dal_action in permissions:
+                permission_classes = permissions[dal_action]
+                return [permission() for permission in permission_classes]
+
+            return [IsAuthenticated()]
+
         def list(self, request, *args, **kwargs):
             if not operations.get("list"):
                 raise MethodNotAllowed("list not allowed")
