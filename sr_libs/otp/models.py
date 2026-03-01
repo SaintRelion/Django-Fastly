@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class OTP(models.Model):
     TYPE_CHOICES = [
@@ -9,7 +11,7 @@ class OTP(models.Model):
     ]
 
     user = models.ForeignKey(
-        "accounts.User", on_delete=models.CASCADE, related_name="otps"
+        User, on_delete=models.CASCADE, related_name="otps"
     )
     code = models.CharField(max_length=6)
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default="sms")

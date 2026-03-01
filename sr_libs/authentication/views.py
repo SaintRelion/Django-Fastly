@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, get_user_model
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import UserDevice
-from sr_libs.authentication.serializers import CustomTokenObtainPairSerializer
+from .serializers import CustomTokenObtainPairSerializer
 
 from .registry import AUTH_REGISTRY
 

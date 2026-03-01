@@ -1,8 +1,10 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class DeviceCredential(models.Model):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     credential_id = models.BinaryField(unique=True)
     public_key = models.BinaryField()
     sign_count = models.PositiveIntegerField(default=0)
@@ -24,7 +26,7 @@ class WebAuthnChallenge(models.Model):
     ]
 
     user = models.ForeignKey(
-        "accounts.User", on_delete=models.CASCADE, related_name="webauthn_challenges"
+        User, on_delete=models.CASCADE, related_name="webauthn_challenges"
     )
     challenge = models.CharField(max_length=200)
     type = models.CharField(max_length=20, choices=CHALLENGE_TYPE)

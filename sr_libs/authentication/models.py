@@ -1,9 +1,11 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class UserDevice(models.Model):
     user = models.ForeignKey(
-        "accounts.User", on_delete=models.CASCADE, related_name="devices"
+        User, on_delete=models.CASCADE, related_name="devices"
     )
     device_id = models.CharField(max_length=255)
     user_agent = models.TextField()
