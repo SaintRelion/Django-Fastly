@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class DALConfig(AppConfig):
-    name = "dal"
+    name = "sr_libs.dal"

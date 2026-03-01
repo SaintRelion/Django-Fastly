@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class FingerprintConfig(AppConfig):
-    name = "fingerprint"
+    name = "sr_libs.fingerprint"

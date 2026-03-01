@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class ModelTriggerConfig(AppConfig):
-    name = "model_trigger"
+    name = "sr_libs.model_trigger"

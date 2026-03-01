@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class DeliveryChannelsConfig(AppConfig):
-    name = "delivery_channels"
+    name = "sr_libs.delivery_channels"

@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class OTP(AppConfig):
-    name = "otp"
+    name = "sr_libs.otp"
