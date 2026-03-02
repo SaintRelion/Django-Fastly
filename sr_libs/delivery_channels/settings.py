@@ -12,3 +12,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = None
 EMAIL_HOST_PASSWORD = None
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Live
+EVENTSTREAM_CHANNELS = ["user-{user_id}"]
+EVENTSTREAM_CHANNEL_PERMISSION = "delivery_channels.permissions.can_read_channel"
+
+EVENTSTREAM_REDIS = {"url": "redis://localhost:6379/0"}

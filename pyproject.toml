@@ -8,6 +8,7 @@ dependencies = [
     "djangorestframework-simplejwt",
     "django-cors-headers",
     "webauthn",
+    "django-eventstream",
     "django-otp",
     "celery",
     "redis",
