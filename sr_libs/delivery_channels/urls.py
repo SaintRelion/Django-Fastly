@@ -1,6 +1,14 @@
-from django.urls import path
-from .views import UserEventStreamView
+from rest_framework.routers import DefaultRouter
+from django_eventstream.viewsets import configure_events_view_set
 
-urlpatterns = [
-    path("events/", UserEventStreamView.as_view(), name="live-events"),
-]
+router = DefaultRouter()
+router.register(
+    "events",
+    configure_events_view_set(
+        channels=lambda request: [f"user-{request.user.id}"],
+        message_types=["message", "info"],
+    ),
+    basename="user-events",
+)
+
+urlpatterns = router.urls
