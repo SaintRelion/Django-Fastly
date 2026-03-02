@@ -1,13 +1,14 @@
-from django_eventstream import EventStreamView
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework.routers import DefaultRouter
+from .views import configure_events_view_set
 
+router = DefaultRouter()
+router.register(
+    "events",
+    configure_events_view_set(
+        channels=lambda request: [f"user-{request.user.id}"],
+        message_types=["message", "info"],
+    ),
+    basename="user-events",
+)
 
-@method_decorator(csrf_exempt, name="dispatch")
-class UserEventStreamView(EventStreamView):
-    def get_channels(self):
-        user = self.request.user
-        if not user.is_authenticated:
-            return []
-
-        return [f"user-{user.id}"]
+urlpatterns = router.urls

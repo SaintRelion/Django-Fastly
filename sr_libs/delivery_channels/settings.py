@@ -17,4 +17,5 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EVENTSTREAM_CHANNELS = ["user-{user_id}"]
 EVENTSTREAM_CHANNEL_PERMISSION = "delivery_channels.permissions.can_read_channel"
 
-EVENTSTREAM_REDIS = {"url": "redis://localhost:6379/0"}
+
+EVENTSTREAM_REDIS = {"host": "localhost", "port": 6379, "db": 0}
