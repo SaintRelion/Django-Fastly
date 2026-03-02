@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from .views import configure_events_view_set
+from django_eventstream.viewsets import configure_events_view_set
 
 router = DefaultRouter()
 router.register(
