@@ -22,7 +22,7 @@ REST_FRAMEWORK = {
 }
 
 EVENTSTREAM_CHANNELMANAGER_CLASS = (
-    "delivery_channels.managers.channelmanager.MyChannelManager"
+    "sr_libs.delivery_channels.managers.channelmanager.MyChannelManager"
 )
 
 EVENTSTREAM_REDIS = {"host": "localhost", "port": 6379, "db": 0}
