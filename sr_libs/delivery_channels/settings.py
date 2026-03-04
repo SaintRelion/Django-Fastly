@@ -16,8 +16,8 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Live
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
+        "django_eventstream.renderers.SSEEventRenderer",
+        "django_eventstream.renderers.BrowsableAPIEventStreamRenderer",
     ],
 }
 
