@@ -1,7 +1,9 @@
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from sr_libs.delivery_channels.views import MyEventsViewSet
+from django_eventstream.viewsets import EventsViewSet
 
 router = DefaultRouter()
-router.register("events_dynamic", MyEventsViewSet, basename="events_dynamic")
+
+router.register("events", EventsViewSet, basename="events")  # no fixed channels
 
 urlpatterns = router.urls

@@ -14,8 +14,15 @@ EMAIL_HOST_PASSWORD = None
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Live
-EVENTSTREAM_CHANNELS = ["user-{user_id}"]
-EVENTSTREAM_CHANNEL_PERMISSION = "delivery_channels.permissions.can_read_channel"
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+}
 
+EVENTSTREAM_CHANNELMANAGER_CLASS = (
+    "delivery_channels.managers.channelmanager.MyChannelManager"
+)
 
 EVENTSTREAM_REDIS = {"host": "localhost", "port": 6379, "db": 0}
