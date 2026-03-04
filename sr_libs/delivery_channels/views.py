@@ -23,7 +23,6 @@ class MyEventsViewSet(EventsViewSet):
                     jwt_auth = JWTAuthentication()
                     validated_token = jwt_auth.get_validated_token(token)
                     user = jwt_auth.get_user(validated_token)
-                    # temporarily assign to request.user for convenience
                     request.user = user
                 except Exception:
                     user = AnonymousUser()
