@@ -7,16 +7,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 class MyEventsViewSet(EventsViewSet):
     permission_classes = [AllowAny]
 
-    # Channels can be dynamic based on request.user
     def get_channels(self, request=None, *args, **kwargs):
-        # 1️⃣ If no request, return empty
         if not request:
+            print("No request")
             return []
 
-        # 2️⃣ If user is already authenticated, use it
         user = getattr(request, "user", None)
+
         if not user or not user.is_authenticated:
-            # 3️⃣ Try to authenticate from query param
             token = request.GET.get("token")
             if token:
                 try:
@@ -24,14 +22,18 @@ class MyEventsViewSet(EventsViewSet):
                     validated_token = jwt_auth.get_validated_token(token)
                     user = jwt_auth.get_user(validated_token)
                     request.user = user
-                except Exception:
+                    print("Authenticated user:", user.id)
+                except Exception as e:
+                    print("JWT failed:", e)
                     user = AnonymousUser()
             else:
+                print("No token")
                 user = AnonymousUser()
 
-        # 4️⃣ If still anonymous, return empty channels
         if not user.is_authenticated:
+            print("Returning empty channels")
             return []
 
-        # 5️⃣ Otherwise return per-user channel
-        return [f"user-{user.id}"]
+        channel = f"user-{user.id}"
+        print("Subscribing to channel:", channel)
+        return [channel]
