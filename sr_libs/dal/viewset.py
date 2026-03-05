@@ -50,14 +50,14 @@ def create_resource_viewset(name, config):
             return super().get_authenticators()
 
         def get_queryset(self):
+            # If a custom query_viewset is provided, use it directly
+            if query_viewset is not None:
+                return query_viewset(self.request)
+
             qs = super().get_queryset()
+            # Only apply is_archived filter if "archive" operation is enabled and model has is_archived
             if operations.get("archive") and hasattr(model, "is_archived"):
                 qs = qs.filter(is_archived=False)
-
-            # dynamic filtering from query params
-            if self.action == "list":
-                qs = apply_dynamic_filters(qs, model, self.request.query_params)
-
             return qs
 
         def get_serializer_class(self):
