@@ -14,13 +14,6 @@ EMAIL_HOST_PASSWORD = None
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Live
-REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": [
-        "django_eventstream.renderers.SSEEventRenderer",
-        "django_eventstream.renderers.BrowsableAPIEventStreamRenderer",
-    ],
-}
-
 EVENTSTREAM_CHANNELMANAGER_CLASS = (
     "sr_libs.delivery_channels.managers.channelmanager.MyChannelManager"
 )
