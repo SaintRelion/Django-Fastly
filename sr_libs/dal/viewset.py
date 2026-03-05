@@ -1,5 +1,5 @@
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import serializers, viewsets
 from rest_framework.exceptions import MethodNotAllowed
 
@@ -31,16 +31,13 @@ def create_resource_viewset(name, config):
         def get_permissions(self):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
+            perms = permissions.get(dal_action, [])
 
-            print(f"{name} - {dal_action}")
-            for permission in permission_classes:
-                print(permission)
+            # If AllowAny is set, disable authentication for this action
+            if any(p == AllowAny for p in perms):
+                self.authentication_classes = []
 
-            if dal_action in permissions:
-                permission_classes = permissions[dal_action]
-                return [permission() for permission in permission_classes]
-
-            return [IsAuthenticated()]
+            return [p() for p in perms] or [IsAuthenticated()]
 
         def get_queryset(self):
             qs = super().get_queryset()
