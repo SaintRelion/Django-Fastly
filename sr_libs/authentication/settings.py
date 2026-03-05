@@ -35,18 +35,3 @@ REST_FRAMEWORK = {
     # "DEFAULT_PAGINATION_CLASS": "core.pagination.DefaultPagination",
     # "PAGE_SIZE": 25,
 }
-
-try:
-    from django_eventstream.renderers import (
-        SSEEventRenderer,
-        BrowsableAPIEventStreamRenderer,
-    )
-
-    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"].extend(
-        [
-            "django_eventstream.renderers.SSEEventRenderer",
-            "django_eventstream.renderers.BrowsableAPIEventStreamRenderer",
-        ]
-    )
-except ImportError:
-    pass
