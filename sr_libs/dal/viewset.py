@@ -22,7 +22,8 @@ def create_resource_viewset(name, config):
     operations = config["operations"]
     permissions = config.get("permissions", {})
 
-    base_queryset = model.objects.all()
+    query_viewset = config.get("query_viewset")  # new
+    base_queryset = query_viewset() if query_viewset else model.objects.all()
 
     class ResourceViewSet(viewsets.ModelViewSet):
         queryset = base_queryset
