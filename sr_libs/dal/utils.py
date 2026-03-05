@@ -26,3 +26,16 @@ def apply_dynamic_filters(qs, model, query_params):
         qs = qs.filter(**filter_kwargs)
 
     return qs
+
+
+def map_request_to_action(request, kwargs):
+    method = request.method.lower()
+    if method == "get":
+        return "retrieve" if "pk" in kwargs else "list"
+    elif method == "post":
+        return "create"
+    elif method in ["put", "patch"]:
+        return "update"
+    elif method == "delete":
+        return "delete"
+    return None

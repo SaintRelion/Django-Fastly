@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import serializers, viewsets
 from rest_framework.exceptions import MethodNotAllowed
 
-from .utils import apply_dynamic_filters
+from .utils import apply_dynamic_filters, map_request_to_action
 from .serializers import create_dynamic_serializer
 from .mixins import ArchiveMixin
 
@@ -28,33 +28,21 @@ def create_resource_viewset(name, config):
         queryset = base_queryset
         serializer_class = None  # dynamic
 
-        def get_permissions(self):
-            drf_action = self.action
-            dal_action = ACTION_MAP.get(drf_action)
+        def get_action(self):
+            return map_request_to_action(self.request, self.kwargs)
 
-            perms = permissions.get(dal_action, [])
+        def get_permissions(self):
+            dal_action = self.get_action()
+            perms = permissions.get(dal_action)
             if perms:
                 return [p() for p in perms]
-
             return [IsAuthenticated()]
 
         def get_authenticators(self):
-            method = self.request.method.lower()
-
-            if method == "get":
-                dal_action = "retrieve" if "pk" in self.kwargs else "list"
-            elif method == "post":
-                dal_action = "create"
-            elif method in ["put", "patch"]:
-                dal_action = "update"
-            elif method == "delete":
-                dal_action = "delete"
-            else:
-                dal_action = None
-
+            dal_action = self.get_action()
             perms = permissions.get(dal_action)
 
-            # If AllowAny → disable authentication entirely
+            # If AllowAny → disable authentication
             if perms and AllowAny in perms:
                 return []
 
