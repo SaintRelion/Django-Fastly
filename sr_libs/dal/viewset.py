@@ -39,10 +39,21 @@ def create_resource_viewset(name, config):
             return [IsAuthenticated()]
 
         def get_authenticators(self):
-            drf_action = self.action
-            dal_action = ACTION_MAP.get(drf_action)
+            method = self.request.method.lower()
+
+            if method == "get":
+                dal_action = "retrieve" if "pk" in self.kwargs else "list"
+            elif method == "post":
+                dal_action = "create"
+            elif method in ["put", "patch"]:
+                dal_action = "update"
+            elif method == "delete":
+                dal_action = "delete"
+            else:
+                dal_action = None
 
             perms = permissions.get(dal_action)
+
             # If AllowAny → disable authentication entirely
             if perms and AllowAny in perms:
                 return []
