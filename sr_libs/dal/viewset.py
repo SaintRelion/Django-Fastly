@@ -31,16 +31,23 @@ def create_resource_viewset(name, config):
         def get_permissions(self):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
+
             perms = permissions.get(dal_action, [])
+            if perms:
+                return [p() for p in perms]
 
-            # If AllowAny is set, disable authentication for this action
-            print("==== Dal =====")
-            for p in perms:
-                print(p)
-            if any(p == AllowAny for p in perms):
-                self.authentication_classes = []
+            return [IsAuthenticated()]
 
-            return [p() for p in perms] or [IsAuthenticated()]
+        def get_authenticators(self):
+            drf_action = self.action
+            dal_action = ACTION_MAP.get(drf_action)
+
+            perms = permissions.get(dal_action)
+            # If AllowAny → disable authentication entirely
+            if perms and AllowAny in perms:
+                return []
+
+            return super().get_authenticators()
 
         def get_queryset(self):
             qs = super().get_queryset()
