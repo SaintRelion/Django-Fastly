@@ -32,6 +32,10 @@ def create_resource_viewset(name, config):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
 
+            print(f"{name} - {dal_action}")
+            for permission in permission_classes:
+                print(permission)
+
             if dal_action in permissions:
                 permission_classes = permissions[dal_action]
                 return [permission() for permission in permission_classes]
