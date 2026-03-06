@@ -1,22 +1,25 @@
-from twilio.rest import Client
-from django.conf import settings
+import requests
 from django.core.exceptions import ImproperlyConfigured
+from django.conf import settings
 
 
-def send_sms(to: str, message: str):
-    """Send an SMS using Twilio."""
-    if not (
-        settings.TWILIO_ACCOUNT_SID
-        and settings.TWILIO_AUTH_TOKEN
-        and settings.TWILIO_PHONE_NUMBER
-    ):
+def send_sms(phone_number, message):
+    if not settings.SEMAPHORE_API_KEY or not settings.SEMAPHORE_SMS_SENDER_NAME:
         raise ImproperlyConfigured(
-            "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER must be set to send SMS."
+            "EMAIL_HOST_USER and SEMAPHORE_SMS_SENDER_NAME must be set to send emails."
         )
 
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    client.messages.create(
-        body=message,
-        from_=settings.TWILIO_PHONE_NUMBER,
-        to=to,
+    payload = {
+        "apikey": settings.SEMAPHORE_API_KEY,
+        "sendername": settings.SEMAPHORE_SMS_SENDER_NAME,
+        "message": message,
+        "number": phone_number,
+    }
+
+    response = requests.post(
+        "https://semaphore.co/api/v4/messages",
+        data=payload,
     )
+
+    response.raise_for_status()
+    return True

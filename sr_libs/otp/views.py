@@ -1,8 +1,9 @@
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 
 from ..delivery_channels.services.email import send_email
 from .models import OTP
@@ -18,19 +19,27 @@ class SendOTP(APIView):
 
     def post(self, request):
         identifier = request.data.get("username") or request.data.get("email")
+        password = request.data.get("password")
 
-        if not identifier:
-            return Response({"detail": "Username or email required."}, status=400)
-
-        otp_type = request.data.get("otp_type", "sms")
-        extra_info = request.data.get("extra_info", {})
+        if not identifier or not password:
+            return Response(
+                {"detail": "Username/email and password required."}, status=400
+            )
 
         try:
             user = User.objects.get(Q(username=identifier) | Q(email=identifier))
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=404)
 
+        user_auth = authenticate(username=user.username, password=password)
+        if not user_auth:
+            return Response({"detail": "Invalid password."}, status=401)
+
+        otp_type = request.data.get("otp_type", "sms")
+        extra_info = request.data.get("extra_info", {})
+
         otp = create_otp(user, otp_type, extra_info=extra_info)
+
         try:
             send_otp(user, otp)
         except ValueError as e:
@@ -70,6 +79,13 @@ class VerifyOTP(APIView):
         if otp.is_expired():
             return Response(
                 {"error": "OTP expired"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        max_attempts = getattr(settings, "OTP_MAX_ATTEMPTS", 3)
+        if otp.attempt_count >= max_attempts:
+            return Response(
+                {"error": "Maximum attempts reached. Access denied."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         otp.attempt_count += 1

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import OTP
@@ -9,14 +10,16 @@ def generate_otp_code(length=6):
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 
-def create_otp(user, otp_type="sms", ttl_seconds=300, extra_info=None):
+def create_otp(user, otp_type="sms", extra_info=None):
+    ttl = getattr(settings, "OTP_EXPIRY_SECONDS", 300)
+
     """Creates an OTP instance"""
     code = generate_otp_code()
     otp = OTP.objects.create(
         user=user,
         code=code,
         type=otp_type,
-        expires_at=timezone.now() + timedelta(seconds=ttl_seconds),
+        expires_at=timezone.now() + timedelta(seconds=ttl),
         additional_info=extra_info or {},
     )
     return otp
@@ -48,5 +51,10 @@ If you did not request this, please ignore this email.
         if not user.phone_number:
             raise ValueError("User has no phone number.")
 
-        message = f"Your OTP code is {otp.code}, expires at {otp.expires_at}."
+        # message = f"Your OTP code is {otp.code}, expires at {otp.expires_at}."
+        # TODO: Hardcoded for now
+        message = (
+            f"Warzone Fiber: Your OTP is {otp.code}.\n"
+            "New device login detected. Do not share."
+        )
         send_sms(user.phone_number, message)
