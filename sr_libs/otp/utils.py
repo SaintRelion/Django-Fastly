@@ -11,7 +11,7 @@ def generate_otp_code(length=6):
 
 
 def create_otp(user, otp_type="sms", extra_info=None):
-    ttl = getattr(settings, "OTP_EXPIRY_SECONDS", 300)
+    ttl = settings.OTP_EXPIRY_SECONDS
 
     """Creates an OTP instance"""
     code = generate_otp_code()

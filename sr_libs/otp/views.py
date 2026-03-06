@@ -81,7 +81,7 @@ class VerifyOTP(APIView):
                 {"error": "OTP expired"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        max_attempts = getattr(settings, "OTP_MAX_ATTEMPTS", 3)
+        max_attempts = settings.OTP_MAX_ATTEMPTS
         if otp.attempt_count >= max_attempts:
             return Response(
                 {"error": "Maximum attempts reached. Access denied."},
