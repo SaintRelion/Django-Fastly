@@ -10,6 +10,7 @@ dependencies = [
     "webauthn",
     "django-eventstream",
     "django-otp",
+    "django-filter",
     "celery",
     "redis",
     "gevent"
