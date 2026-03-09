@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 
 from django.forms.models import model_to_dict
 from django.core.serializers.json import DjangoJSONEncoder
@@ -10,8 +9,6 @@ from sr_libs.audit_logger.context import (
     get_current_system,
     get_current_user,
 )
-
-User = get_user_model()
 
 
 class AuditLog(models.Model):
@@ -25,7 +22,9 @@ class AuditLog(models.Model):
         ("SEND", "SEND"),
     ]
 
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(
+        "accounts.User", null=True, blank=True, on_delete=models.SET_NULL
+    )
 
     source = models.CharField(max_length=50, default="user")
 

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 
-from sr_libs.audit_logger.context import set_current_user
+from sr_libs.audit_logger.context import set_current_ip, set_current_user
 from sr_libs.authentication.models import UserDevice
 
 
@@ -69,6 +69,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if log_service_action:
             token = set_current_user(user)
+            ip = set_current_ip(request.META.get("REMOTE_ADDR"))
             try:
                 log_service_action(
                     action="LOGIN",
@@ -78,5 +79,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 )
             finally:
                 set_current_user(token)
+                set_current_ip(ip)
 
         return data
