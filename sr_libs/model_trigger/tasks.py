@@ -3,11 +3,26 @@ from importlib import import_module
 from django.apps import apps
 from django.utils import timezone
 from django.db import transaction
+
 from .models import ScheduledTask
 from .registry import registry
 import logging
 
 logger = logging.getLogger(__name__)
+
+try:
+    from sr_libs.audit_logger.context import set_current_system
+except ImportError:
+    # Dummy context if audit_logger not installed
+    class DummyToken:
+        pass
+
+    def set_current_system(system_name):
+        # Return dummy token, do nothing
+        return DummyToken()
+
+    # Optionally log warning once
+    logger.warning("sr_libs.audit_logger not installed; system audit context disabled")
 
 
 def resolve_action(action_path: str):
@@ -50,6 +65,7 @@ def process_model_task(
             logger.error(f"[Task] No action_path provided for model {model_label}")
             return
 
+        token_system = set_current_system("scheduler")
         try:
             module_path, func_name = action_path.rsplit(".", 1)
             module = import_module(module_path)
@@ -61,6 +77,8 @@ def process_model_task(
         except Exception as exc:
             logger.exception(f"[Task] Action execution failed: {action_path}")
             raise self.retry(exc=exc)
+        finally:
+            set_current_system(token_system)
 
         # Re-fetch instance (important if action changed state)
         instance.refresh_from_db()

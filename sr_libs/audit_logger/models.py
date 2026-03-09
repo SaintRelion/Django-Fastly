@@ -5,29 +5,13 @@ from django.forms.models import model_to_dict
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 
+from sr_libs.audit_logger.context import (
+    get_current_ip,
+    get_current_system,
+    get_current_user,
+)
+
 User = get_user_model()
-
-# --- ContextVars for async-safe current user/IP ---
-import contextvars
-
-current_user_var = contextvars.ContextVar("current_user", default=None)
-current_ip_var = contextvars.ContextVar("current_ip", default=None)
-
-
-def set_current_user(user):
-    current_user_var.set(user)
-
-
-def get_current_user():
-    return current_user_var.get()
-
-
-def set_current_ip(ip):
-    current_ip_var.set(ip)
-
-
-def get_current_ip():
-    return current_ip_var.get()
 
 
 class AuditLog(models.Model):
@@ -100,36 +84,40 @@ class AuditModel(models.Model):
         return diff
 
     def save(self, *args, **kwargs):
-
         user = get_current_user()
-        if not user or not getattr(user, "is_authenticated", False):
-            user = None
-
+        system_identity = get_current_system()
         ip = get_current_ip()
+
+        if user and getattr(user, "is_authenticated", False):
+            source = "user"
+        elif system_identity:
+            source = f"system:{system_identity}"
+            user = None  # system actions have no human user
+        else:
+            source = "anonymous"
+            user = None
 
         is_update = bool(self.pk)
 
         old_instance = None
-        if is_update:
-            old_instance = self.__class__.objects.filter(pk=self.pk).first()
+        old_instance = (
+            self.__class__.objects.filter(pk=self.pk).first() if is_update else None
+        )
 
         super().save(*args, **kwargs)
 
-        if is_update:
-            changes = self._get_field_diff(old_instance)
-            action = "UPDATE"
-        else:
-            changes = self._serialize_instance(self)
-            action = "CREATE"
+        changes = (
+            self._get_field_diff(old_instance)
+            if is_update
+            else self._serialize_instance(self)
+        )
+        action = "UPDATE" if is_update else "CREATE"
 
         if changes:
-
-            category = getattr(self, "AUDIT_CATEGORY", self.__class__.__name__)
-
             AuditLog.objects.create(
                 user=user,
-                source="user" if user else "anonymous",
-                category=category,
+                source=source,
+                category=getattr(self, "AUDIT_CATEGORY", self.__class__.__name__),
                 action=action,
                 object_id=self.pk,
                 new_data=changes,
@@ -139,19 +127,24 @@ class AuditModel(models.Model):
     def delete(self, *args, **kwargs):
 
         user = get_current_user()
-        if not user or not getattr(user, "is_authenticated", False):
-            user = None
-
+        system_identity = get_current_system()
         ip = get_current_ip()
+
+        if user and getattr(user, "is_authenticated", False):
+            source = "user"
+        elif system_identity:
+            source = f"system:{system_identity}"
+            user = None  # system actions have no human user
+        else:
+            source = "anonymous"
+            user = None
 
         data = self._serialize_instance(self)
 
-        category = getattr(self, "AUDIT_CATEGORY", self.__class__.__name__)
-
         AuditLog.objects.create(
             user=user,
-            source="user" if user else "anonymous",
-            category=category,
+            source=source,
+            category=getattr(self, "AUDIT_CATEGORY", self.__class__.__name__),
             action="DELETE",
             object_id=self.pk,
             new_data=data,
