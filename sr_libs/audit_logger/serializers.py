@@ -8,4 +8,4 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = "__all__"
-        read_only_fields = "__all__"
+        read_only_fields = [f.name for f in model._meta.fields]
