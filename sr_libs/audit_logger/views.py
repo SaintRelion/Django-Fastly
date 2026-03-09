@@ -8,25 +8,25 @@ from .permissions import IsAuditViewer
 
 
 class AuditLogListView(generics.ListAPIView):
+    """
+    List all audit logs with filters, search, and ordering.
+    """
+
     queryset = AuditLog.objects.all().order_by("-created_at")
     serializer_class = AuditLogSerializer
     permission_classes = [IsAuditViewer]
 
-    filter_backends = [
-        DjangoFilterBackend,
-        SearchFilter,
-        OrderingFilter,
-    ]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
     filterset_fields = [
         "action",
-        "model_name",
+        "category",
         "source",
         "user",
     ]
 
     search_fields = [
-        "model_name",
+        "category",
         "object_id",
     ]
 
@@ -37,6 +37,10 @@ class AuditLogListView(generics.ListAPIView):
 
 
 class AuditLogDetailView(generics.RetrieveAPIView):
+    """
+    Retrieve a single audit log by ID.
+    """
+
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
     permission_classes = [IsAuditViewer]
