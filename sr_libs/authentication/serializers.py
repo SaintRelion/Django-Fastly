@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 
+from sr_libs.audit_logger.context import set_current_user
 from sr_libs.authentication.models import UserDevice
 
 
@@ -37,6 +38,12 @@ def create_dynamic_serializer(
     )
 
 
+try:
+    from sr_libs.audit_logger.function import log_service_action
+except ImportError:
+    log_service_action = None  # fallback if audit logger is not installed
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
@@ -59,5 +66,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                         "is_trusted": True,
                     },
                 )
+
+        if log_service_action:
+            token = set_current_user(user)
+            try:
+                log_service_action(
+                    action="LOGIN",
+                    source="auth:jwt",
+                    model_name="User",
+                    object_id=user.id,
+                )
+            finally:
+                set_current_user(token)
 
         return data
