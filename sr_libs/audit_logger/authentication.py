@@ -1,5 +1,5 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from sr_libs.audit_logger.models import set_current_user, set_current_ip
+from sr_libs.audit_logger.context import set_current_ip, set_current_user
 
 
 class AuditJWTAuthentication(JWTAuthentication):
