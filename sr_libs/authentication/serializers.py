@@ -73,7 +73,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 log_service_action(
                     action="LOGIN",
                     source="auth:jwt",
-                    model_name="User",
+                    category="User",
                     object_id=user.id,
                 )
             finally:
