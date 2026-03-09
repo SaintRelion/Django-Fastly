@@ -71,7 +71,7 @@ class VerifyOTP(APIView):
                 {"error": "OTP not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if otp.verified:
+        if settings.OTP_ONE_TIME_USE and otp.verified:
             return Response(
                 {"error": "OTP already verified"}, status=status.HTTP_400_BAD_REQUEST
             )
