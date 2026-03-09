@@ -5,8 +5,6 @@ from django.forms.models import model_to_dict
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 
-from .utils import get_current_user, get_client_ip
-
 User = get_user_model()
 
 # --- ContextVars for async-safe current user/IP ---
@@ -107,7 +105,7 @@ class AuditModel(models.Model):
         if not user or not getattr(user, "is_authenticated", False):
             user = None
 
-        ip = get_client_ip()
+        ip = get_current_ip()
 
         is_update = bool(self.pk)
 
@@ -144,7 +142,7 @@ class AuditModel(models.Model):
         if not user or not getattr(user, "is_authenticated", False):
             user = None
 
-        ip = get_client_ip()
+        ip = get_current_ip()
 
         data = self._serialize_instance(self)
 
