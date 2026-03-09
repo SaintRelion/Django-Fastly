@@ -48,6 +48,9 @@ class AuditModel(models.Model):
     def save(self, *args, **kwargs):
 
         user = get_current_user()
+        if not user or not getattr(user, "is_authenticated", False):
+            user = None
+
         ip = get_client_ip()
 
         is_update = bool(self.pk)
@@ -82,6 +85,9 @@ class AuditModel(models.Model):
     def delete(self, *args, **kwargs):
 
         user = get_current_user()
+        if not user or not getattr(user, "is_authenticated", False):
+            user = None
+
         ip = get_client_ip()
 
         data = self._serialize_instance(self)
