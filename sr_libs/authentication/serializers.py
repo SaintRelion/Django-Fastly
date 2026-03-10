@@ -1,5 +1,7 @@
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.conf import settings
 from django.utils import timezone
 
 from sr_libs.audit_logger.context import set_current_ip, set_current_user
@@ -50,6 +52,23 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         request = self.context.get("request")
         user = self.user
+
+        # --- Custom account status check ---
+        if hasattr(user, "status") and user.status != "active":
+
+            # Try to get a mapping from settings
+            messages = settings.SR_AUTHENTICATION_ACCOUNT_STATUS_MESSAGE
+
+            if messages and isinstance(messages, dict):
+                # Use custom message if defined
+                message = messages.get(
+                    user.status, f"Your account has been {user.status}"
+                )
+            else:
+                # Default generic message
+                message = f"Your account has been {user.status}"
+
+            raise AuthenticationFailed(detail=message)
 
         if request and user:
             device_id = request.headers.get("X-Device-ID")

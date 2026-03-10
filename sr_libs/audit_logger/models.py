@@ -54,31 +54,62 @@ class AuditModel(models.Model):
         abstract = True
 
     def _serialize_instance(self, instance):
-        """Return a JSON-serializable dict of model fields"""
+        """
+        Return a JSON-serializable dict of model fields.
+        - ForeignKeys are replaced with their string representation (human-readable)
+        - Keeps your existing JSON serialization
+        """
         if not instance:
             return None
-        data = model_to_dict(instance, fields=[f.name for f in instance._meta.fields])
+
+        data = {}
+        for field in instance._meta.fields:
+            name = field.name
+            value = getattr(instance, name)
+
+            if isinstance(field, models.ForeignKey):
+                # Replace FK ID with str(value) if available
+                if value is not None:
+                    data[name] = str(value)
+                else:
+                    data[name] = None
+            else:
+                data[name] = value
+
+        # Ensure JSON serializable (keeps your current behavior)
         return json.loads(json.dumps(data, cls=DjangoJSONEncoder))
 
     def _get_field_diff(self, old_instance):
+        old_data = self._serialize_instance(old_instance) if old_instance else {}
 
-        if not old_instance:
-            return self._serialize_instance(self)
-
-        old_data = self._serialize_instance(old_instance)
         new_data = self._serialize_instance(self)
 
         diff = {}
 
-        for field, old_value in old_data.items():
+        sensitive_fields = getattr(self, "AUDIT_SENSITIVE_FIELDS", [])
+
+        for field, new_value in new_data.items():
 
             if field in self.IGNORE_FIELDS:
                 continue
 
-            new_value = new_data.get(field)
+            old_value = old_data.get(field)
 
-            if old_value != new_value:
-                diff[field] = f"{old_value}->{new_value}"
+            if old_instance is None:
+                # CREATE case
+                if field in sensitive_fields:
+                    diff[field] = f"{field} changed"
+                else:
+                    diff[field] = new_value
+
+            else:
+                # UPDATE case
+                if old_value != new_value:
+
+                    if field in sensitive_fields:
+                        diff[field] = f"{field} changed"
+                    else:
+                        diff[field] = f"{old_value}->{new_value}"
 
         return diff
 
@@ -105,11 +136,7 @@ class AuditModel(models.Model):
 
         super().save(*args, **kwargs)
 
-        changes = (
-            self._get_field_diff(old_instance)
-            if is_update
-            else self._serialize_instance(self)
-        )
+        changes = self._get_field_diff(old_instance)
         action = "UPDATE" if is_update else "CREATE"
 
         if changes:

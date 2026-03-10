@@ -1,10 +1,5 @@
 from datetime import timedelta
 
-CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOW_CREDENTIALS = True
-
-MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware"]
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
@@ -12,8 +7,6 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
-
-AUTHENTICATION_BACKENDS = ["sr_libs.authentication.backends.MultiIdentifierBackend"]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -35,3 +28,14 @@ REST_FRAMEWORK = {
     # "DEFAULT_PAGINATION_CLASS": "core.pagination.DefaultPagination",
     # "PAGE_SIZE": 25,
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_CREDENTIALS = True
+
+SR_AUTHENTICATION_MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware"]
+
+AUTHENTICATION_BACKENDS = ["sr_libs.authentication.backends.MultiIdentifierBackend"]
+
+SR_AUTHENTICATION_ACCOUNT_STATUS_MESSAGE = None
+
+SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE = None

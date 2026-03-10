@@ -2,10 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
+
+from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 
+from datetime import timedelta
+
+from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+
+from sr_libs.delivery_channels.services.email import send_email
 from .models import UserDevice
 from .serializers import CustomTokenObtainPairSerializer
 
@@ -99,3 +106,96 @@ class MeView(APIView):
         serializer = serializer_class(request.user)
 
         return Response(serializer.data)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("new_password")
+
+        if not current_password or not new_password:
+            return Response(
+                {"detail": "Both current and new password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.check_password(current_password):
+            return Response(
+                {"detail": "Current password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Password changed successfully."})
+
+
+class SendResetPasswordLinkView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response(
+                {"detail": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Optional: don't reveal if email exists
+            return Response(
+                {"detail": "If this email exists, a reset link has been sent."}
+            )
+
+        # Create short-lived JWT
+        token = AccessToken.for_user(user)
+        token.set_exp(lifetime=timedelta(seconds=240))  # 4 minutes
+
+        # Build reset link for frontend
+        if not settings.SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE:
+            raise ImproperlyConfigured(
+                "SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE must be set to receive reset password link."
+            )
+
+        reset_url = f"{settings.SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE}?token={str(token)}"
+
+        send_email(
+            subject="Password Reset",
+            message=f"Hi {user.username}, click here to reset your password: {reset_url}",
+            recipient_list=[user.email],
+        )
+
+        return Response({"detail": "If this email exists, a reset link has been sent."})
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token_str = request.data.get("token")
+        new_password = request.data.get("password")
+
+        if not token_str or not new_password:
+            return Response(
+                {"detail": "Token and password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = AccessToken(token_str)
+            user_id = token["user_id"]
+            user = User.objects.get(id=user_id)
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail": "Password reset successfully."})
+        except Exception:
+            return Response(
+                {"detail": "Invalid or expired token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
