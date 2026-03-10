@@ -98,7 +98,7 @@ class AuditModel(models.Model):
             if old_instance is None:
                 # CREATE case
                 if field in sensitive_fields:
-                    diff[field] = f"{field} changed"
+                    diff[field] = f"{field} set"
                 else:
                     diff[field] = new_value
 
