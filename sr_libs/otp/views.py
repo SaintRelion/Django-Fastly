@@ -5,11 +5,14 @@ from rest_framework import status
 from django.db.models import Q
 from django.contrib.auth import authenticate, get_user_model
 
-from ..delivery_channels.services.email import send_email
+from .config import SROTPConfig
+
 from .models import OTP
 from .utils import create_otp, send_otp
 
 User = get_user_model()
+
+SR_OTP_CONFIG = getattr(settings, "SR_OTP_CONFIG", SROTPConfig())
 
 
 class SendOTP(APIView):
@@ -71,7 +74,7 @@ class VerifyOTP(APIView):
                 {"error": "OTP not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if settings.OTP_ONE_TIME_USE and otp.verified:
+        if SR_OTP_CONFIG.OTP_ONE_TIME_USE and otp.verified:
             return Response(
                 {"error": "OTP already verified"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -81,7 +84,7 @@ class VerifyOTP(APIView):
                 {"error": "OTP expired"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        max_attempts = settings.OTP_MAX_ATTEMPTS
+        max_attempts = SR_OTP_CONFIG.OTP_MAX_ATTEMPTS
         if otp.attempt_count >= max_attempts:
             return Response(
                 {"error": "Maximum attempts reached. Access denied."},

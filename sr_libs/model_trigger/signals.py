@@ -1,9 +1,9 @@
 from django.db.models.signals import post_save
+from django.db import transaction
 from django.dispatch import receiver
 
 from .models import ScheduledTask
 from .registry import registry
-from .tasks import process_model_task
 
 
 def setup_model_signals():
@@ -20,31 +20,23 @@ def setup_model_signals():
                 return
 
             # --- 1️⃣ Reactive rules ---
+            # always run immediately inside transaction
             for rule in config["reactive_rules"]:
-                print("==========================Reacting")
-                if rule.condition(instance, created):
-                    process_model_task.delay(
-                        model_label=model_label,
-                        instance_id=instance.id,
-                        action_path=rule.action_path,
-                    )
+                rule.action(instance, created)
 
             # --- 2️⃣ Scheduled rules ---
-            for rule in config["scheduled_rules"]:
-                # Check if we should monitor this instance
-                print("==========================Scheduling")
-                should_monitor = rule.monitor_condition(instance)
-                print(should_monitor)
-                existing_task = ScheduledTask.objects.filter(
-                    model=model_label,
-                    instance_id=instance.id,
-                    rule_name=rule.name,
-                ).first()
+            # defer scheduling until transaction commits
+            def schedule_tasks():
+                for rule in config["scheduled_rules"]:
+                    should_monitor = rule.monitor_condition(instance)
+                    existing_task = ScheduledTask.objects.filter(
+                        model=model_label,
+                        instance_id=instance.id,
+                        rule_name=rule.name,
+                    ).first()
 
-                if should_monitor:
-                    # Create ScheduledTask if it doesn't exist
-                    scheduled_at = rule.scheduled_at(instance)
-                    if not existing_task:
+                    if should_monitor and not existing_task:
+                        scheduled_at = rule.scheduled_at(instance)
                         ScheduledTask.objects.create(
                             model=model_label,
                             instance_id=instance.id,
@@ -53,14 +45,10 @@ def setup_model_signals():
                             repeat_every=rule.repeat_every,
                             status="pending",
                         )
-                else:
-                    # Stop condition met → delete scheduled task
-                    if (
-                        existing_task
-                        and rule.stop_condition
-                        and rule.stop_condition(instance)
+                    elif existing_task and (
+                        not should_monitor
+                        or (rule.stop_condition and rule.stop_condition(instance))
                     ):
                         existing_task.delete()
-                    elif existing_task and not rule.stop_condition:
-                        # optional: delete if monitor_condition False and no stop_condition
-                        existing_task.delete()
+
+            transaction.on_commit(schedule_tasks)

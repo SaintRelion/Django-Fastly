@@ -1,9 +1,10 @@
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers, viewsets
 from rest_framework.exceptions import MethodNotAllowed
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 
-from .utils import apply_dynamic_filters, map_request_to_action
 from .serializers import create_dynamic_serializer
 from .mixins import ArchiveMixin
 
@@ -17,51 +18,66 @@ ACTION_MAP = {
 }
 
 
+def map_request_to_action(request, kwargs):
+    method = request.method.lower()
+    if method == "get":
+        return "retrieve" if "pk" in kwargs else "list"
+    elif method == "post":
+        return "create"
+    elif method in ["put", "patch"]:
+        return "update"
+    elif method == "delete":
+        return "delete"
+    return None
+
+
 def create_resource_viewset(name, config):
     model = config["model"]
     operations = config["operations"]
-    permissions = config.get("permissions", {})
-
-    query_viewset = config.get("query_viewset")  # new
-    base_queryset = query_viewset() if query_viewset else model.objects.all()
 
     class ResourceViewSet(viewsets.ModelViewSet):
-        queryset = base_queryset
+        queryset = model.objects.all()
         serializer_class = None  # dynamic
+        filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+        filterset_fields = config.get("filterset_fields", [])
+        search_fields = config.get("search_fields", [])
+        ordering_fields = config.get("ordering_fields", [])
 
         def get_action(self):
             return map_request_to_action(self.request, self.kwargs)
 
-        def get_permissions(self):
-            dal_action = self.get_action()
-            perms = permissions.get(dal_action)
-            if perms:
-                return [p() for p in perms]
-            return [IsAuthenticated()]
-
         def get_authenticators(self):
-            dal_action = self.get_action()
-            perms = permissions.get(dal_action)
+            action = self.get_action()
 
-            # If AllowAny → disable authentication
-            if perms and AllowAny in perms:
+            auth_config = self.config.get("authenticators", {}).get(action)
+            # [] → disable authentication
+            if auth_config == []:
                 return []
 
+            # default DRF authenticators
             return super().get_authenticators()
+
+        def get_permissions(self):
+            action = self.get_action()
+
+            perms = self.config.get("permissions", {}).get(action)
+            if perms:
+                return [p() for p in perms]
+
+            return [IsAuthenticated()]
 
         def get_queryset(self):
             qs = super().get_queryset()
-            if (
-                not query_viewset
-                and operations.get("archive")
-                and hasattr(model, "is_archived")
-            ):
-                qs = qs.filter(is_archived=False)
 
-            # dynamic filtering from query params
-            if self.action == "list":
-                qs = apply_dynamic_filters(qs, model, self.request.query_params)
-
+            # Archive logic
+            if hasattr(model, "is_archived") and operations.get("archive"):
+                include_archived = self.request.query_params.get("is_archived")
+                if include_archived is None or include_archived.lower() == "false":
+                    qs = qs.filter(is_archived=False)
+                elif include_archived.lower() == "true":
+                    qs = qs.filter(is_archived=True)
+                elif include_archived.lower() == "trulse":
+                    pass  # literally all rows
             return qs
 
         def get_serializer_class(self):
@@ -114,24 +130,21 @@ def create_resource_viewset(name, config):
 
 def create_derived_viewset(name, config):
     serializer_class = config["serializer"]
-    operations = config["operations"]
-    permissions = config.get("permissions", {})
+    permissions = config.get("permissions", [])
 
     class DerivedViewSet(viewsets.ViewSet):
-        def get_permissions(self):
-            drf_action = self.action
-            dal_action = ACTION_MAP.get(drf_action)
+        filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+        filterset_fields = config.get("filterset_fields", [])
+        search_fields = config.get("search_fields", [])
+        ordering_fields = config.get("ordering_fields", [])
 
-            if dal_action in permissions:
-                permission_classes = permissions[dal_action]
-                return [permission() for permission in permission_classes]
+        def get_permissions(self):
+            if permissions:
+                return [p() for p in permissions]
 
             return [IsAuthenticated()]
 
         def list(self, request, *args, **kwargs):
-            if not operations.get("list"):
-                raise MethodNotAllowed("list not allowed")
-
             serializer = serializer_class(data=request.query_params)
             serializer.is_valid(raise_exception=True)
             filters = serializer.validated_data

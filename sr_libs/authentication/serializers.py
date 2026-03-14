@@ -2,10 +2,14 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.conf import settings
-from django.utils import timezone
 
-from sr_libs.audit_logger.context import set_current_ip, set_current_user
-from sr_libs.authentication.models import UserDevice
+from .config import SRAuthenticationConfig
+from .context import set_current_ip, set_current_user
+from .models import UserDevice
+
+SR_AUTHENTICATION_CONFIG = getattr(
+    settings, "SR_AUTHENTICATION_CONFIG", SRAuthenticationConfig()
+)
 
 
 def create_dynamic_serializer(
@@ -57,7 +61,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if hasattr(user, "status") and user.status != "active":
 
             # Try to get a mapping from settings
-            messages = settings.SR_AUTHENTICATION_ACCOUNT_STATUS_MESSAGE
+            messages = SR_AUTHENTICATION_CONFIG.ACCOUNT_STATUS_MESSAGE
 
             if messages and isinstance(messages, dict):
                 # Use custom message if defined

@@ -1,5 +1,10 @@
 from rest_framework.permissions import BasePermission
 from django.conf import settings
+from .config import SRAuditLoggerConfig
+
+SR_AUDIT_LOGGER_CONFIG = getattr(
+    settings, "SR_AUDIT_LOGGER_CONFIG", SRAuditLoggerConfig()
+)
 
 
 class IsAuditViewer(BasePermission):
@@ -13,9 +18,11 @@ class IsAuditViewer(BasePermission):
             return True
 
         # Check group membership
-        allowed_groups = settings.SR_LIBS_AUDIT_LOGGER_ALLOWED_GROUPS
         user_group_names = user.groups.values_list("name", flat=True)
-        if any(group in allowed_groups for group in user_group_names):
+
+        if any(
+            group in SR_AUDIT_LOGGER_CONFIG.ALLOWED_GROUPS for group in user_group_names
+        ):
             return True
 
         return False

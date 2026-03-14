@@ -1,8 +1,8 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from sr_libs.audit_logger.context import set_current_ip, set_current_user
+from sr_libs.authentication.context import set_current_ip, set_current_user
 
 
-class AuditJWTAuthentication(JWTAuthentication):
+class ContextJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         result = super().authenticate(request)
         if result:

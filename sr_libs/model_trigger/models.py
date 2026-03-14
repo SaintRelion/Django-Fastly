@@ -1,15 +1,14 @@
 from datetime import datetime, timedelta
 
 from django.db import models
-from dataclasses import dataclass, field
-from typing import Callable, Optional, Dict, Any
+from dataclasses import dataclass
+from typing import Callable, Optional, Any
 
 
 @dataclass
 class ReactiveRule:
-    name: str  # optional, for clarity
-    condition: Callable[[Any, bool], bool]  # (instance, created) -> bool
-    action_path: str  # e.g., "billing.actions.send_sms"
+    name: str
+    action: Callable
 
 
 @dataclass

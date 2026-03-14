@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    from sr_libs.audit_logger.context import set_current_system
+    from sr_libs.authentication.context import set_current_system
 except ImportError:
     # Dummy context if audit_logger not installed
     class DummyToken:
@@ -25,19 +25,12 @@ except ImportError:
     logger.warning("sr_libs.audit_logger not installed; system audit context disabled")
 
 
-def resolve_action(action_path: str):
-    module_path, func_name = action_path.rsplit(".", 1)
-    module = import_module(module_path)
-    return getattr(module, func_name)
-
-
 @shared_task(bind=True, max_retries=5, default_retry_delay=30)
 def process_model_task(
     self,
     model_label: str,
     instance_id: int,
     rule_name: str = None,  # Only for scheduled rules
-    action_path: str = None,  # Only for reactive rules
 ):
     try:
         Model = apps.get_model(model_label)
@@ -51,20 +44,18 @@ def process_model_task(
             logger.warning(f"[Task] Model {model_label} not registered")
             return
 
-        rule = None
-        # 2️⃣ Scheduled rule path
-        if rule_name:
-            rule_map = {r.name: r for r in config["scheduled_rules"]}
-            rule = rule_map.get(rule_name)
-            if not rule:
-                logger.warning(f"[Task] Scheduled rule '{rule_name}' not found")
-                return
-            action_path = rule.action_path
-
-        if not action_path:
-            logger.error(f"[Task] No action_path provided for model {model_label}")
+        rule_map = {r.name: r for r in config["scheduled_rules"]}
+        rule = rule_map.get(rule_name)
+        if not rule:
+            logger.warning(f"[Task] Scheduled rule '{rule_name}' not found")
             return
 
+        action_path = rule.action_path
+        if not action_path:
+            logger.error(f"[Task] No action_path provided for {model_label}")
+            return
+
+        # --- Execute action ---
         token_system = set_current_system("scheduler")
         try:
             module_path, func_name = action_path.rsplit(".", 1)
@@ -80,38 +71,35 @@ def process_model_task(
         finally:
             set_current_system(token_system)
 
-        # Re-fetch instance (important if action changed state)
+        # --- Refresh instance after action ---
         instance.refresh_from_db()
 
-        if rule:
-            # Check stop condition
-            should_stop = False
-            if rule.stop_condition:
-                try:
-                    should_stop = rule.stop_condition(instance)
-                except Exception as exc:
-                    logger.exception(f"[Task] Stop condition error for {rule_name}")
-                    raise self.retry(exc=exc)
+        # --- Handle stop condition / reschedule ---
+        should_stop = False
+        if rule.stop_condition:
+            try:
+                should_stop = rule.stop_condition(instance)
+            except Exception as exc:
+                logger.exception(f"[Task] Stop condition error for {rule_name}")
+                raise self.retry(exc=exc)
 
-            # Get ScheduledTask row
-            task = ScheduledTask.objects.filter(
-                model=model_label, instance_id=instance_id, rule_name=rule.name
-            ).first()
-            if not task:
-                return
+        task = ScheduledTask.objects.filter(
+            model=model_label, instance_id=instance_id, rule_name=rule.name
+        ).first()
+        if not task:
+            return
 
-            # Delete or reschedule
-            if should_stop:
-                task.delete()
-                logger.info(f"[Task] '{rule_name}' stopped and deleted")
-            elif rule.repeat_every:
-                task.scheduled_at = timezone.now() + rule.repeat_every
-                task.status = "pending"
-                task.save()
-                logger.info(f"[Task] '{rule_name}' rescheduled to {task.scheduled_at}")
-            else:
-                task.delete()
-                logger.info(f"[Task] '{rule_name}' completed and deleted")
+        if should_stop:
+            task.delete()
+            logger.info(f"[Task] '{rule_name}' stopped and deleted")
+        elif rule.repeat_every:
+            task.scheduled_at = timezone.now() + rule.repeat_every
+            task.status = "pending"
+            task.save()
+            logger.info(f"[Task] '{rule_name}' rescheduled to {task.scheduled_at}")
+        else:
+            task.delete()
+            logger.info(f"[Task] '{rule_name}' completed and deleted")
     except Exception as exc:
         logger.exception(
             f"[Task] process_model_task failed for {model_label}#{instance_id}"

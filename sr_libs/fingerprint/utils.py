@@ -1,5 +1,4 @@
 import base64
-import os
 
 from webauthn import (
     generate_registration_options,
@@ -25,10 +24,15 @@ def base64url_to_bytes(val: str) -> bytes:
 
 
 from django.conf import settings
+from .config import SRFingerprintConfig
 
-RP_ID = getattr(settings, "RP_ID", "default_rp_id")
-RP_NAME = getattr(settings, "RP_NAME", "default_rp_name")
-ORIGIN = getattr(settings, "ORIGIN", "https://localhost")
+SR_FINGERPRINT_CONFIG = getattr(
+    settings, "SR_FINGERPRINT_CONFIG", SRFingerprintConfig()
+)
+
+RP_ID = SR_FINGERPRINT_CONFIG.RP_ID
+RP_NAME = SR_FINGERPRINT_CONFIG.RP_NAME
+ORIGIN = SR_FINGERPRINT_CONFIG.ORIGIN
 
 
 def create_registration_options(user):

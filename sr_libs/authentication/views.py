@@ -11,12 +11,17 @@ from datetime import timedelta
 
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-
 from sr_libs.delivery_channels.services.email import send_email
+
+from .config import SRAuthenticationConfig
 from .models import UserDevice
 from .serializers import CustomTokenObtainPairSerializer
 
 from .registry import AUTH_REGISTRY
+
+SR_AUTHENTICATION_CONFIG = getattr(
+    settings, "SR_AUTHENTICATION_CONFIG", SRAuthenticationConfig()
+)
 
 User = get_user_model()
 
@@ -25,7 +30,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
-class CheckDeviceView(APIView):
+class TrustedDeviceView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -158,12 +163,12 @@ class SendResetPasswordLinkView(APIView):
         token.set_exp(lifetime=timedelta(seconds=240))  # 4 minutes
 
         # Build reset link for frontend
-        if not settings.SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE:
+        if not SR_AUTHENTICATION_CONFIG.FRONTEND_RESET_PASSWORD_PAGE:
             raise ImproperlyConfigured(
                 "SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE must be set to receive reset password link."
             )
 
-        reset_url = f"{settings.SR_AUTHENTICATION_FRONTEND_RESET_PASSWORD_PAGE}?token={str(token)}"
+        reset_url = f"{SR_AUTHENTICATION_CONFIG.FRONTEND_RESET_PASSWORD_PAGE}?token={str(token)}"
 
         send_email(
             subject="Password Reset",

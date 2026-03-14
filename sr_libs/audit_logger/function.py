@@ -1,4 +1,8 @@
-from .context import get_current_user, get_current_ip, get_current_system
+from sr_libs.authentication.context import (
+    get_current_user,
+    get_current_ip,
+    get_current_system,
+)
 from .models import AuditLog
 
 

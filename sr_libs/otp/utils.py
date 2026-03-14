@@ -1,8 +1,12 @@
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+
+from .config import SROTPConfig
 from .models import OTP
 import random
+
+SR_OTP_CONFIG = getattr(settings, "SR_OTP_CONFIG", SROTPConfig())
 
 
 def generate_otp_code(length=6):
@@ -11,7 +15,7 @@ def generate_otp_code(length=6):
 
 
 def create_otp(user, otp_type="sms", extra_info=None):
-    ttl = settings.OTP_EXPIRY_SECONDS
+    ttl = SR_OTP_CONFIG.OTP_EXPIRY_SECONDS
 
     """Creates an OTP instance"""
     code = generate_otp_code()

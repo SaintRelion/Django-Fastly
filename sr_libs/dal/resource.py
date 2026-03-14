@@ -1,15 +1,21 @@
+from typing import Callable, Optional
+
 from django.db import models
 from rest_framework import serializers
+
+from .serializers import DerivedSerializer
+
+from .types import AuthenticatorsDict, OperationsDict, PermissionValue, PermissionsDict
 from .registry import RESOURCE_REGISTRY, DERIVED_RESOURCE_REGISTRY
 
 
 def register_resource(
     *,
     name: str,
-    model,
-    operations: dict,
-    permissions: dict = None,
-    query_viewset: callable = None,
+    model: type[models.Model],
+    operations: OperationsDict,
+    authenticators: Optional[AuthenticatorsDict] = None,
+    permissions: Optional[PermissionsDict] = None,
 ):
     if name in RESOURCE_REGISTRY:
         raise ValueError(f"Resource '{name}' already registered.")
@@ -21,30 +27,22 @@ def register_resource(
         "model": model,
         "endpoint": name,
         "operations": operations,
+        "authenticators": authenticators or {},
         "permissions": permissions or {},
-        "query_viewset": query_viewset,
     }
 
 
 def register_derived_resource(
-    *, name: str, serializer, operations: dict = None, permissions: dict = None
+    *,
+    name: str,
+    serializer: type[DerivedSerializer],
+    permissions: PermissionValue = None,
 ):
-    operations = operations or {"list": True}
-
-    # Validate operations
-    for op in operations.keys():
-        if op not in {"list"}:
-            raise ValueError(f"Derived resources only support 'list', not '{op}'")
-
-    if not (
-        isinstance(serializer, type)
-        and issubclass(serializer, serializers.BaseSerializer)
-    ):
-        raise ValueError("Derived resource requires a DRF Serializer class")
+    if not (isinstance(serializer, type) and issubclass(serializer, DerivedSerializer)):
+        raise ValueError("Derived resource requires a DerivedSerializer class")
 
     DERIVED_RESOURCE_REGISTRY[name] = {
         "endpoint": name,
         "serializer": serializer,
-        "operations": operations,
-        "permissions": permissions or {},
+        "permissions": permissions or [],
     }
