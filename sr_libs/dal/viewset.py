@@ -2,9 +2,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers, viewsets
 from rest_framework.exceptions import MethodNotAllowed
+from django.db import models
+
+import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-
 from rest_framework.settings import api_settings
 
 from .serializers import create_dynamic_serializer
@@ -33,14 +35,68 @@ def map_request_to_action(request, kwargs):
     return None
 
 
+def create_dynamic_filterset(model: type[models.Model]):
+    """
+    Dynamically creates a FilterSet for the model,
+    supporting __in, __ne, __gte, __lte for all fields.
+    """
+    filters = {}
+
+    for f in model._meta.get_fields():
+        if isinstance(f, (models.Field,)):
+            field_name = f.name
+
+            # Basic equality filter
+            filters[field_name] = django_filters.Filter(field_name=field_name)
+
+            # Boolean and numeric lookups
+            if isinstance(
+                f, (models.IntegerField, models.FloatField, models.DecimalField)
+            ):
+                filters[f"{field_name}__gte"] = django_filters.Filter(
+                    field_name=field_name, lookup_expr="gte"
+                )
+                filters[f"{field_name}__lte"] = django_filters.Filter(
+                    field_name=field_name, lookup_expr="lte"
+                )
+                filters[f"{field_name}__ne"] = django_filters.Filter(
+                    field_name=field_name, lookup_expr="ne"
+                )
+
+            # Char / Text / Choice fields
+            if isinstance(f, (models.CharField, models.TextField, models.EmailField)):
+                filters[f"{field_name}__in"] = django_filters.BaseInFilter(
+                    field_name=field_name
+                )
+                filters[f"{field_name}__ne"] = django_filters.Filter(
+                    field_name=field_name, lookup_expr="ne"
+                )
+
+            # Boolean fields
+            if isinstance(f, models.BooleanField):
+                filters[f"{field_name}__ne"] = django_filters.Filter(
+                    field_name=field_name, lookup_expr="ne"
+                )
+
+    # Dynamically create a FilterSet class
+    return type(
+        f"{model.__name__}DynamicFilterSet",
+        (django_filters.FilterSet,),
+        {"Meta": type("Meta", (), {"model": model, "fields": "__all__"}), **filters},
+    )
+
+
 def create_resource_viewset(name, config):
     model = config["model"]
     operations = config["operations"]
+
+    DynamicFilterSet = create_dynamic_filterset(model)
 
     class ResourceViewSet(viewsets.ModelViewSet):
         queryset = model.objects.all()
         serializer_class = None  # dynamic
         filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+        filterset_class = DynamicFilterSet
         filterset_fields = config.get("filterset_fields") or "__all__"
         search_fields = config.get("search_fields") or "__all__"
         ordering_fields = config.get("ordering_fields") or "__all__"
@@ -81,26 +137,6 @@ def create_resource_viewset(name, config):
                 elif include_archived.lower() == "trulse":
                     pass  # literally all rows
             return qs
-
-        # ✅ override list to explicitly filter queryset
-        def list(self, request, *args, **kwargs):
-            qs = self.filter_queryset(
-                self.get_queryset()
-            )  # applies all filter_backends
-            page = self.paginate_queryset(qs)
-            serializer = self.get_serializer(page or qs, many=True)
-            return (
-                self.get_paginated_response(serializer.data)
-                if page
-                else Response(serializer.data)
-            )
-
-        # Optional: override retrieve to filter as well
-        def retrieve(self, request, *args, **kwargs):
-            qs = self.filter_queryset(self.get_queryset())
-            instance = self.get_object()  # uses filtered queryset
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data)
 
         def get_serializer_class(self):
             drf_action = self.action
