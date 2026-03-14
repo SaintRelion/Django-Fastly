@@ -5,7 +5,6 @@ from rest_framework.exceptions import MethodNotAllowed
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
-from rest_framework.pagination import get_page_size
 from rest_framework.settings import api_settings
 
 from .serializers import create_dynamic_serializer
