@@ -1,6 +1,6 @@
 [project]
 name = "django-saintrelion-libs"
-version = "9.0.20"
+version = "9.0.21"
 description = "Modular Django libraries"
 dependencies = [
     "django",
