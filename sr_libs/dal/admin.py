@@ -1,12 +1,7 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth import get_user_model
 from django.db import models
 
 from .registry import RESOURCE_REGISTRY
-
-# Register your custom User separately
-admin.site.register(get_user_model(), UserAdmin)
 
 # Dynamically register all resources from the DAL
 for resource_name, resource_info in RESOURCE_REGISTRY.items():

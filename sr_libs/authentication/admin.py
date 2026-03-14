@@ -1,8 +1,9 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth import get_user_model
+from django.apps import apps
 
-User = get_user_model()
+User = apps.get_model(settings.AUTH_USER_MODEL)
 
 
 @admin.register(User)
