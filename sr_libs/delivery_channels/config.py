@@ -1,8 +1,8 @@
-from dataclasses import dataclass
-from typing import List, Optional, Dict
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Union
 
 
-@dataclass
+@dataclass(frozen=True)
 class SRDeliveryChannelsConfig:
     # Twilio SMS configuration
     TWILIO_ACCOUNT_SID: Optional[str] = None
@@ -27,8 +27,10 @@ class SRDeliveryChannelsConfig:
     EVENTSTREAM_CHANNELMANAGER_CLASS: str = (
         "sr_libs.delivery_channels.managers.channelmanager.MyChannelManager"
     )
-    EVENTSTREAM_REDIS: Dict[str, int | str] = None
-    EVENTSTREAM_DEFAULT_RENDERERS: List[str] = (
-        "django_eventstream.renderers.SSEEventRenderer",
-        "django_eventstream.renderers.BrowsableAPIEventStreamRenderer",
+    EVENTSTREAM_REDIS: Dict[str, Union[int, str]] = field(default_factory=dict)
+    EVENTSTREAM_DEFAULT_RENDERERS: List[str] = field(
+        default_factory=lambda: [
+            "django_eventstream.renderers.SSEEventRenderer",
+            "django_eventstream.renderers.BrowsableAPIEventStreamRenderer",
+        ]
     )

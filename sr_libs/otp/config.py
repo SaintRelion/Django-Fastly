@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class SROTPConfig:
     OTP_EXPIRY_SECONDS: int = 300
     OTP_MAX_ATTEMPTS: int = 3
