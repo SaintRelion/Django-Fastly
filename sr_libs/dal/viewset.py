@@ -5,6 +5,9 @@ from rest_framework.exceptions import MethodNotAllowed
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
+from rest_framework.pagination import get_page_size
+from rest_framework.settings import api_settings
+
 from .serializers import create_dynamic_serializer
 from .mixins import ArchiveMixin
 
@@ -152,11 +155,13 @@ def create_derived_viewset(name, config):
             qs = serializer_class.get_queryset(filters)
 
             # 3️⃣ Paginate the QuerySet
-            paginator = self.pagination_class()
-            page = paginator.paginate_queryset(qs, request)
-            if page is not None:
-                data = serializer_class.list_data(page)  # only transforms, no filtering
-                return paginator.get_paginated_response(data)
+            paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
+            if paginator_class is not None:
+                paginator = paginator_class()
+                page = paginator.paginate_queryset(qs, request, view=self)
+                if page is not None:
+                    data = serializer_class.list_data(page)
+                    return paginator.get_paginated_response(data)
 
             # 4️⃣ Fallback (no pagination)
             data = serializer_class.list_data(qs)
