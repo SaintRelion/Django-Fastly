@@ -50,34 +50,16 @@ def create_dynamic_filterset(model: type[models.Model]):
     for f in model._meta.get_fields():
         if isinstance(f, models.Field):
             field_name = f.name
-            lookups = ["exact"]  # always support exact
+            fields_dict[field_name] = ["exact"]  # plus other lookups
 
-            if isinstance(f, (models.CharField, models.TextField, models.EmailField)):
-                lookups += ["contains", "in"]
-            elif isinstance(
-                f,
-                (
-                    models.IntegerField,
-                    models.FloatField,
-                    models.DecimalField,
-                    models.DateField,
-                    models.DateTimeField,
-                ),
-            ):
-                lookups += ["gte", "lte", "in"]
-            elif isinstance(f, models.BooleanField):
-                pass  # only exact
-
-            fields_dict[field_name] = lookups
-
-            # Add dynamic __ne method filter
+            # Add __ne dynamically
             ne_filter_name = f"{field_name}__ne"
 
             def make_ne_method(field):
-                # create a closure capturing field
-                return lambda self, queryset, name, value: queryset.exclude(
-                    **{field: value}
-                )
+                def filter_method(self, queryset, name, value):
+                    return queryset.exclude(**{field: value})
+
+                return filter_method
 
             extra_filters[ne_filter_name] = django_filters.CharFilter(
                 method=make_ne_method(field_name)
