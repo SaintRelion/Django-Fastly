@@ -40,37 +40,40 @@ def create_dynamic_filterset(model: type[models.Model]):
     Auto-generate a FilterSet class for a model.
     Supports:
       - exact lookups for all fields
-      - contains, in for Char/Text fields
-      - gte, lte, in for numeric/date fields
-      - automatically adds __ne support via method filters
+      - contains for CharFields/TextFields
+      - in, gte, lte for numeric fields
     """
     fields_dict = {}
-    extra_filters = {}
 
     for f in model._meta.get_fields():
         if isinstance(f, models.Field):
             field_name = f.name
-            fields_dict[field_name] = ["exact"]  # plus other lookups
+            lookups = ["exact"]  # always support exact
 
-            # Add __ne dynamically
-            ne_filter_name = f"{field_name}__ne"
+            if isinstance(f, (models.CharField, models.TextField, models.EmailField)):
+                lookups.append("contains")
+                lookups.append("in")
+            elif isinstance(
+                f,
+                (
+                    models.IntegerField,
+                    models.FloatField,
+                    models.DecimalField,
+                    models.DateField,
+                    models.DateTimeField,
+                ),
+            ):
+                lookups.extend(["gte", "lte", "in"])
+            elif isinstance(f, models.BooleanField):
+                pass  # only exact
 
-            def make_ne_method(field):
-                def filter_method(self, queryset, name, value):
-                    return queryset.exclude(**{field: value})
+            fields_dict[field_name] = lookups
 
-                return filter_method
-
-            extra_filters[ne_filter_name] = django_filters.CharFilter(
-                method=make_ne_method(field_name)
-            )
-
-    # Build the FilterSet class dynamically
+    # Dynamically create a FilterSet class
     return type(
         f"{model.__name__}DynamicFilterSet",
         (django_filters.FilterSet,),
         {
-            **extra_filters,
             "Meta": type(
                 "Meta",
                 (),
@@ -78,7 +81,7 @@ def create_dynamic_filterset(model: type[models.Model]):
                     "model": model,
                     "fields": fields_dict,
                 },
-            ),
+            )
         },
     )
 
@@ -133,6 +136,18 @@ def create_resource_viewset(name, config):
                     qs = qs.filter(is_archived=True)
                 elif include_archived.lower() == "trulse":
                     pass  # literally all rows
+
+            # Handle __ne filters manually
+            ne_filters = {
+                k: v for k, v in self.request.query_params.items() if k.endswith("__ne")
+            }
+            for key, value in ne_filters.items():
+                # Strip the __ne suffix
+                field_name = key[:-4]
+
+                # Use exclude(), supports related fields
+                qs = qs.exclude(**{field_name: value})
+
             return qs
 
         def get_serializer_class(self):
