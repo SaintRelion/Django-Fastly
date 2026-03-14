@@ -152,7 +152,7 @@ def create_resource_viewset(name, config):
 
         def paginate_queryset(self, queryset):
             if self.request.query_params.get("nopage", "").lower() == "true":
-                return None  # tells DRF to skip pagination
+                return list(queryset)
             return super().paginate_queryset(queryset)
 
         def get_serializer_class(self):
@@ -179,6 +179,29 @@ def create_resource_viewset(name, config):
             return create_dynamic_serializer(
                 resource_model=model,
                 allowed_fields=op_value,
+            )
+
+        def list(self, request, *args, **kwargs):
+            qs = self.filter_queryset(self.get_queryset())
+
+            page = self.paginate_queryset(qs)
+            if (
+                page is not None
+                and not request.query_params.get("nopage", "").lower() == "true"
+            ):
+                # Normal DRF pagination
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            # Handle nopage manually
+            serializer = self.get_serializer(page, many=True)  # page here is full list
+            return Response(
+                {
+                    "count": len(page),
+                    "next": None,
+                    "previous": None,
+                    "results": serializer.data,
+                }
             )
 
         def destroy(self, request, *args, **kwargs):
@@ -227,19 +250,26 @@ def create_derived_viewset(name, config):
             qs = serializer_class.get_queryset(filters)
 
             # 3️⃣ Paginate the QuerySet
-            nopage = request.query_params.get("nopage", "").lower() == "true"
-            if not nopage:
-                paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
-                if paginator_class is not None:
-                    paginator = paginator_class()
-                    page = paginator.paginate_queryset(qs, request, view=self)
-                    if page is not None:
-                        data = serializer_class.list_data(page)
-                        return paginator.get_paginated_response(data)
+            # Check for nopage
+            if request.query_params.get("nopage", "").lower() == "true":
+                serializer = self.get_serializer(qs, many=True)
+                return Response(
+                    {
+                        "count": qs.count(),
+                        "next": None,
+                        "previous": None,
+                        "results": serializer.data,
+                    }
+                )
 
-            # 4️⃣ Fallback (no pagination)
-            data = serializer_class.list_data(qs)
-            return Response(data)
+            # Otherwise normal pagination
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(qs, many=True)
+            return Response(serializer.data)
 
     DerivedViewSet.__name__ = f"{name.capitalize()}DerivedViewSet"
     return DerivedViewSet
