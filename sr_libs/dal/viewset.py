@@ -82,6 +82,26 @@ def create_resource_viewset(name, config):
                     pass  # literally all rows
             return qs
 
+        # ✅ override list to explicitly filter queryset
+        def list(self, request, *args, **kwargs):
+            qs = self.filter_queryset(
+                self.get_queryset()
+            )  # applies all filter_backends
+            page = self.paginate_queryset(qs)
+            serializer = self.get_serializer(page or qs, many=True)
+            return (
+                self.get_paginated_response(serializer.data)
+                if page
+                else Response(serializer.data)
+            )
+
+        # Optional: override retrieve to filter as well
+        def retrieve(self, request, *args, **kwargs):
+            qs = self.filter_queryset(self.get_queryset())
+            instance = self.get_object()  # uses filtered queryset
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
         def get_serializer_class(self):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
