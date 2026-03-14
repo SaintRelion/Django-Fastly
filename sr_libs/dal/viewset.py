@@ -150,6 +150,11 @@ def create_resource_viewset(name, config):
 
             return qs
 
+        def paginate_queryset(self, queryset):
+            if self.request.query_params.get("nopage", "").lower() == "true":
+                return None  # tells DRF to skip pagination
+            return super().paginate_queryset(queryset)
+
         def get_serializer_class(self):
             drf_action = self.action
             dal_action = ACTION_MAP.get(drf_action)
@@ -222,13 +227,15 @@ def create_derived_viewset(name, config):
             qs = serializer_class.get_queryset(filters)
 
             # 3️⃣ Paginate the QuerySet
-            paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
-            if paginator_class is not None:
-                paginator = paginator_class()
-                page = paginator.paginate_queryset(qs, request, view=self)
-                if page is not None:
-                    data = serializer_class.list_data(page)
-                    return paginator.get_paginated_response(data)
+            nopage = request.query_params.get("nopage", "").lower() == "true"
+            if not nopage:
+                paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
+                if paginator_class is not None:
+                    paginator = paginator_class()
+                    page = paginator.paginate_queryset(qs, request, view=self)
+                    if page is not None:
+                        data = serializer_class.list_data(page)
+                        return paginator.get_paginated_response(data)
 
             # 4️⃣ Fallback (no pagination)
             data = serializer_class.list_data(qs)
