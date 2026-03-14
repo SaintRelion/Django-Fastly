@@ -41,9 +41,9 @@ def create_resource_viewset(name, config):
         queryset = model.objects.all()
         serializer_class = None  # dynamic
         filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-        filterset_fields = config.get("filterset_fields", [])
-        search_fields = config.get("search_fields", [])
-        ordering_fields = config.get("ordering_fields", [])
+        filterset_fields = config.get("filterset_fields") or "__all__"
+        search_fields = config.get("search_fields") or "__all__"
+        ordering_fields = config.get("ordering_fields") or "__all__"
 
         def get_action(self):
             return map_request_to_action(self.request, self.kwargs)
