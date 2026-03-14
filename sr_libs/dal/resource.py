@@ -16,6 +16,7 @@ def register_resource(
     operations: OperationsDict,
     authenticators: Optional[AuthenticatorsDict] = None,
     permissions: Optional[PermissionsDict] = None,
+    filterset_fields: Optional[list[str]] = None,
 ):
     if name in RESOURCE_REGISTRY:
         raise ValueError(f"Resource '{name}' already registered.")
@@ -23,12 +24,17 @@ def register_resource(
     if not issubclass(model, models.Model):
         raise ValueError("model must be a Django model.")
 
+    # default: all model fields if filterset_fields is None
+    if filterset_fields is None:
+        filterset_fields = [f.name for f in model._meta.fields]
+
     RESOURCE_REGISTRY[name] = {
         "model": model,
         "endpoint": name,
         "operations": operations,
         "authenticators": authenticators or {},
         "permissions": permissions or {},
+        "filterset_fields": filterset_fields,
     }
 
 

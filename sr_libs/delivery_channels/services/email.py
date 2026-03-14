@@ -17,7 +17,7 @@ def send_email(subject: str, message: str, recipient_list: list[str]):
         or not SR_DELIVERY_CHANNELS_CONFIG.EMAIL_HOST_PASSWORD
     ):
         raise ImproperlyConfigured(
-            "EMAIL_HOST_USER and EMAIL_HOST_PASSWORD must be set to send emails."
+            "EMAIL_HOST_USER and DEFAULT_FROM_EMAIL and EMAIL_HOST_PASSWORD must be set to send emails."
         )
 
     send_mail(
