@@ -37,52 +37,52 @@ def map_request_to_action(request, kwargs):
 
 def create_dynamic_filterset(model: type[models.Model]):
     """
-    Dynamically creates a FilterSet for the model,
-    supporting __in, __ne, __gte, __lte for all fields.
+    Auto-generate a FilterSet class for a model.
+    Supports:
+      - exact lookups for all fields
+      - contains for CharFields/TextFields
+      - in, gte, lte for numeric fields
     """
-    filters = {}
+    fields_dict = {}
 
     for f in model._meta.get_fields():
-        if isinstance(f, (models.Field,)):
+        if isinstance(f, models.Field):
             field_name = f.name
+            lookups = ["exact"]  # always support exact
 
-            # Basic equality filter
-            filters[field_name] = django_filters.Filter(field_name=field_name)
-
-            # Boolean and numeric lookups
-            if isinstance(
-                f, (models.IntegerField, models.FloatField, models.DecimalField)
-            ):
-                filters[f"{field_name}__gte"] = django_filters.Filter(
-                    field_name=field_name, lookup_expr="gte"
-                )
-                filters[f"{field_name}__lte"] = django_filters.Filter(
-                    field_name=field_name, lookup_expr="lte"
-                )
-                filters[f"{field_name}__ne"] = django_filters.Filter(
-                    field_name=field_name, lookup_expr="ne"
-                )
-
-            # Char / Text / Choice fields
             if isinstance(f, (models.CharField, models.TextField, models.EmailField)):
-                filters[f"{field_name}__in"] = django_filters.BaseInFilter(
-                    field_name=field_name
-                )
-                filters[f"{field_name}__ne"] = django_filters.Filter(
-                    field_name=field_name, lookup_expr="ne"
-                )
+                lookups.append("contains")
+                lookups.append("in")
+            elif isinstance(
+                f,
+                (
+                    models.IntegerField,
+                    models.FloatField,
+                    models.DecimalField,
+                    models.DateField,
+                    models.DateTimeField,
+                ),
+            ):
+                lookups.extend(["gte", "lte", "in"])
+            elif isinstance(f, models.BooleanField):
+                pass  # only exact
 
-            # Boolean fields
-            if isinstance(f, models.BooleanField):
-                filters[f"{field_name}__ne"] = django_filters.Filter(
-                    field_name=field_name, lookup_expr="ne"
-                )
+            fields_dict[field_name] = lookups
 
     # Dynamically create a FilterSet class
     return type(
         f"{model.__name__}DynamicFilterSet",
         (django_filters.FilterSet,),
-        {"Meta": type("Meta", (), {"model": model, "fields": "__all__"}), **filters},
+        {
+            "Meta": type(
+                "Meta",
+                (),
+                {
+                    "model": model,
+                    "fields": fields_dict,
+                },
+            )
+        },
     )
 
 
