@@ -249,27 +249,32 @@ def create_derived_viewset(name, config):
 
             qs = serializer_class.get_queryset(filters)
 
-            # 3️⃣ Paginate the QuerySet
-            # Check for nopage
+            # Handle nopage manually
             if request.query_params.get("nopage", "").lower() == "true":
-                serializer = self.get_serializer(qs, many=True)
+                data = serializer_class.list_data(qs)
                 return Response(
                     {
                         "count": qs.count(),
                         "next": None,
                         "previous": None,
-                        "results": serializer.data,
+                        "results": data,
                     }
                 )
 
             # Otherwise normal pagination
-            page = self.paginate_queryset(qs)
-            if page is not None:
-                serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
+            paginator_class = api_settings.DEFAULT_PAGINATION_CLASS
+            if paginator_class is not None:
+                paginator = paginator_class()
+                page = paginator.paginate_queryset(qs, request, view=self)
+                if page is not None:
+                    data = serializer_class.list_data(page)
+                    return paginator.get_paginated_response(data)
 
-            serializer = self.get_serializer(qs, many=True)
-            return Response(serializer.data)
+            # Fallback (no pagination configured)
+            data = serializer_class.list_data(qs)
+            return Response(
+                {"results": data, "count": len(data), "next": None, "previous": None}
+            )
 
     DerivedViewSet.__name__ = f"{name.capitalize()}DerivedViewSet"
     return DerivedViewSet
