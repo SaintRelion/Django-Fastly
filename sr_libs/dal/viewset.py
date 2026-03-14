@@ -40,10 +40,12 @@ def create_dynamic_filterset(model: type[models.Model]):
     Auto-generate a FilterSet class for a model.
     Supports:
       - exact lookups for all fields
-      - contains for CharFields/TextFields
-      - in, gte, lte for numeric fields
+      - contains, in for Char/Text fields
+      - gte, lte, in for numeric/date fields
+      - automatically adds __ne support via method filters
     """
     fields_dict = {}
+    extra_filters = {}
 
     for f in model._meta.get_fields():
         if isinstance(f, models.Field):
@@ -51,8 +53,7 @@ def create_dynamic_filterset(model: type[models.Model]):
             lookups = ["exact"]  # always support exact
 
             if isinstance(f, (models.CharField, models.TextField, models.EmailField)):
-                lookups.append("contains")
-                lookups.append("in")
+                lookups += ["contains", "in"]
             elif isinstance(
                 f,
                 (
@@ -63,17 +64,31 @@ def create_dynamic_filterset(model: type[models.Model]):
                     models.DateTimeField,
                 ),
             ):
-                lookups.extend(["gte", "lte", "in"])
+                lookups += ["gte", "lte", "in"]
             elif isinstance(f, models.BooleanField):
                 pass  # only exact
 
             fields_dict[field_name] = lookups
 
-    # Dynamically create a FilterSet class
+            # Add dynamic __ne method filter
+            ne_filter_name = f"{field_name}__ne"
+
+            def make_ne_method(field):
+                # create a closure capturing field
+                return lambda self, queryset, name, value: queryset.exclude(
+                    **{field: value}
+                )
+
+            extra_filters[ne_filter_name] = django_filters.CharFilter(
+                method=make_ne_method(field_name)
+            )
+
+    # Build the FilterSet class dynamically
     return type(
         f"{model.__name__}DynamicFilterSet",
         (django_filters.FilterSet,),
         {
+            **extra_filters,
             "Meta": type(
                 "Meta",
                 (),
@@ -81,7 +96,7 @@ def create_dynamic_filterset(model: type[models.Model]):
                     "model": model,
                     "fields": fields_dict,
                 },
-            )
+            ),
         },
     )
 
