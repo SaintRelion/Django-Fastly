@@ -149,16 +149,18 @@ def create_derived_viewset(name, config):
             serializer.is_valid(raise_exception=True)
             filters = serializer.validated_data
 
-            qs = serializer_class.get_queryset(filters)  # <-- new method
-            page = self.paginate_queryset(qs)  # DRF pagination helper
-            if page is not None:
-                # serialize the page
-                serializer_instance = serializer_class(page, many=True)
-                return self.get_paginated_response(serializer_instance.data)
+            qs = serializer_class.get_queryset(filters)
 
-            # fallback if no pagination
-            serializer_instance = serializer_class(qs, many=True)
-            return Response(serializer_instance.data)
+            # 3️⃣ Paginate the QuerySet
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(qs, request)
+            if page is not None:
+                data = serializer_class.list_data(page)  # only transforms, no filtering
+                return paginator.get_paginated_response(data)
+
+            # 4️⃣ Fallback (no pagination)
+            data = serializer_class.list_data(qs)
+            return Response(data)
 
     DerivedViewSet.__name__ = f"{name.capitalize()}DerivedViewSet"
     return DerivedViewSet

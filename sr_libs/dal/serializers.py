@@ -40,8 +40,15 @@ class DerivedSerializer(serializers.Serializer):
     """
 
     @classmethod
-    def list_data(cls, filters):
+    def get_queryset(cls, filters):
         raise NotImplementedError(
-            f"{cls.__name__}.list_data(filters) not implemented! "
+            f"{cls.__name__}.get_queryset(filters) not implemented! "
+            "Override this method in your derived serializer."
+        )
+
+    @classmethod
+    def list_data(cls, queryset):
+        raise NotImplementedError(
+            f"{cls.__name__}.list_data(queryset) not implemented! "
             "Override this method in your derived serializer."
         )
