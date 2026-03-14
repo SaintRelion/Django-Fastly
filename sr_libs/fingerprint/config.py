@@ -3,6 +3,6 @@ from dataclasses import dataclass
 
 @dataclass
 class SRFingerprintConfig:
-    RP_ID = "default-rp-id"
-    RP_NAME = "default-rp-name"
-    ORIGIN = "http://localhost"
+    RP_ID: str = "default-rp-id"
+    RP_NAME: str = "default-rp-name"
+    ORIGIN: str = "http://localhost"
