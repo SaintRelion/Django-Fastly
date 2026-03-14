@@ -49,7 +49,7 @@ def create_resource_viewset(name, config):
         def get_authenticators(self):
             action = self.get_action()
 
-            auth_config = self.config.get("authenticators", {}).get(action)
+            auth_config = config.get("authenticators", {}).get(action)
             # [] → disable authentication
             if auth_config == []:
                 return []
@@ -60,7 +60,7 @@ def create_resource_viewset(name, config):
         def get_permissions(self):
             action = self.get_action()
 
-            perms = self.config.get("permissions", {}).get(action)
+            perms = config.get("permissions", {}).get(action)
             if perms:
                 return [p() for p in perms]
 
